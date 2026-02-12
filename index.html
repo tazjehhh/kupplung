@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kupplung 3D-Lernmodul</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Inter:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Realtime 3D Training</p>
+          <h1>Kupplung verstehen wie in einem Game-Showroom</h1>
+          <p>
+            Diese Darstellung ist ein echter 3D-Render in Echtzeit. Mit der Maus
+            drehen, zoomen und pannen – und dabei live sehen, wie die Kupplung den
+            Kraftfluss zwischen Motor und Getriebe koppelt oder trennt.
+          </p>
+        </div>
+        <ul class="hero-badges">
+          <li>🖱️ Maus: Orbit + Zoom + Pan</li>
+          <li>⚡ Echtzeit-Animation</li>
+          <li>🎮 Video-Game Look</li>
+        </ul>
+      </header>
+
+      <main class="content-grid">
+        <section class="viewer-card">
+          <canvas id="scene"></canvas>
+          <div class="overlay-controls">
+            <div class="control-headline">Kupplungsweg</div>
+            <label for="clutchRange">Pedalstellung</label>
+            <input id="clutchRange" type="range" min="0" max="100" value="0" />
+            <p id="stateText">Status: Eingekuppelt (Kraftschluss aktiv)</p>
+            <small>Tip: Halte linke Maustaste gedrückt, um die Baugruppe frei zu drehen.</small>
+          </div>
+        </section>
+
+        <aside class="info-panel">
+          <h2>Lernstationen</h2>
+          <div class="steps" id="steps"></div>
+          <article class="fact-card">
+            <h3>Merksatz</h3>
+            <p>
+              Beim Treten des Pedals bewegt die Ausrückmechanik die Druckplatte
+              weg von der Reibscheibe. Je größer der Abstand, desto geringer die
+              übertragene Motorkraft.
+            </p>
+          </article>
+        </aside>
+      </main>
+    </div>
+
+    <script type="module" src="main.js"></script>
+  </body>
+</html>
