@@ -174,17 +174,13 @@ export class Room extends DurableObject {
         try { other.close(4000, "replaced"); } catch {}
       }
     }
-    ws.serializeAttachment({ pid });
-
     const room = this.room;
     const name = cleanText(msg.name, MAX_NAME) || "Wurm";
+    // Name und Team merken, damit Zuschauer nach dem Spiel in die Lobby aufrücken können
+    ws.serializeAttachment({ pid, name, team: cleanTeam(msg.team), color: msg.color });
     let player = room.players.find((p) => p.id === pid);
     if (!player && room.phase === "lobby" && room.players.length < MAX_PLAYERS) {
-      const used = new Set(room.players.map((p) => p.color));
-      let color = Number.isInteger(msg.color) && !used.has(msg.color) && msg.color >= 0 && msg.color < COLOR_COUNT ? msg.color : -1;
-      for (let c = 0; color < 0 && c < COLOR_COUNT; c++) if (!used.has(c)) color = c;
-      player = { id: pid, name, color, team: cleanTeam(msg.team) ?? { name: "", worms: [] } };
-      room.players.push(player);
+      player = this.addPlayer(pid, name, cleanTeam(msg.team), msg.color);
     } else if (player && room.phase === "lobby") {
       player.name = name;
       const team = cleanTeam(msg.team);
@@ -252,12 +248,26 @@ export class Room extends DurableObject {
     }
   }
 
+  addPlayer(pid, name, team, preferredColor) {
+    const used = new Set(this.room.players.map((p) => p.color));
+    let color = Number.isInteger(preferredColor) && preferredColor >= 0 && preferredColor < COLOR_COUNT && !used.has(preferredColor) ? preferredColor : -1;
+    for (let c = 0; color < 0 && c < COLOR_COUNT; c++) if (!used.has(c)) color = c;
+    const player = { id: pid, name, color, team: team ?? { name: "", worms: [] } };
+    this.room.players.push(player);
+    return player;
+  }
+
   backToLobby() {
     const room = this.room;
     const online = this.onlinePids();
     room.phase = "lobby";
     room.auth = null;
     room.players = room.players.filter((p) => online.has(p.id));
+    for (const ws of this.ctx.getWebSockets()) {
+      const att = ws.deserializeAttachment();
+      if (!att?.pid || room.players.length >= MAX_PLAYERS || room.players.some((p) => p.id === att.pid)) continue;
+      this.addPlayer(att.pid, att.name || "Wurm", att.team, att.color);
+    }
     if (!room.players.some((p) => p.id === room.host)) room.host = room.players[0]?.id ?? null;
     this.cp = null;
     this.log = [];

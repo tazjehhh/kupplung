@@ -1,4 +1,4 @@
-import { TEAM_COLORS } from "../game/const.js";
+import { TEAM_COLORS, JET_FUEL } from "../game/const.js";
 import { WEAPON } from "../game/weapons.js";
 import { TerrainRenderer, THEMES } from "./terrain-render.js";
 
@@ -591,6 +591,7 @@ export class Renderer {
     const color = TEAM_COLORS[team?.color] ?? "#888";
     const t = this.time;
     const moving = s.moving(w);
+    if (active) this.drawHeldWeapon(ctx, w, p, world);
     ctx.save();
     ctx.translate(p.x, p.y);
     let tilt = 0;
@@ -691,8 +692,6 @@ export class Renderer {
     else ctx.arc(3.5, -0.5 + bob, 2, 0.2, Math.PI - 0.6);
     ctx.stroke();
     ctx.restore();
-
-    if (active) this.drawHeldWeapon(ctx, w, p, world);
   }
 
   drawHeldWeapon(ctx, w, p, world) {
@@ -709,11 +708,12 @@ export class Renderer {
     switch (wp.id) {
       case "bazooka":
         ctx.fillStyle = "#6b8e4e";
-        roundRect(ctx, -4, -3, 20, 6, 2);
+        roundRect(ctx, -6, -3, 24, 6, 2);
         ctx.fill();
         ctx.stroke();
         ctx.fillStyle = "#3d3d4a";
-        ctx.fillRect(12, -3.5, 3, 7);
+        ctx.fillRect(14, -3.5, 3, 7);
+        ctx.strokeRect(14, -3.5, 3, 7);
         break;
       case "shotgun":
         ctx.fillStyle = "#3d3d4a";
@@ -745,7 +745,7 @@ export class Renderer {
         const colors = { grenade: "#3f8a3a", cluster: "#d8423a", banana: "#ffd83d", holy: "#ffd23d" };
         ctx.fillStyle = colors[wp.id] ?? "#888";
         ctx.beginPath();
-        ctx.arc(9, 0, 3.8, 0, TAU);
+        ctx.arc(11, 0, 3.8, 0, TAU);
         ctx.fill();
         ctx.stroke();
       }
@@ -823,6 +823,12 @@ export class Renderer {
       if (!w.drown) {
         this.text(ctx, String(Math.max(0, w.hp)), p.x, top, color, 13);
         this.text(ctx, w.name, p.x, top - 14, color, 12);
+      }
+      if (w.mode === "jet") {
+        ctx.fillStyle = INK;
+        ctx.fillRect(p.x - 17, top + 4, 34, 6);
+        ctx.fillStyle = "#ffd23d";
+        ctx.fillRect(p.x - 16, top + 5, 32 * Math.max(0, w.fuel / JET_FUEL), 4);
       }
       const isActive = w.id === t.worm && t.phase === "play";
       if (isActive && s.showArrow) {

@@ -302,8 +302,13 @@ export class World {
       if (t.phase === "play") this.startRetreat();
     }
     if (t.phase === "play") {
-      this.gameTime++;
-      if (--t.time <= 0) this.endTurn();
+      // Kurze Orientierungszeit: Die Uhr läuft erst los, wenn der Spieler etwas tut
+      if (t.ready > 0 && inp && (inp.left || inp.right || inp.up || inp.down || inp.fire || inp.pressed.jump || inp.pressed.back || inp.click)) t.ready = 0;
+      if (t.ready > 0) t.ready--;
+      else {
+        this.gameTime++;
+        if (--t.time <= 0) this.endTurn();
+      }
     } else if (t.phase === "retreat") {
       this.gameTime++;
       if (--t.retreat <= 0) this.endTurn();
@@ -687,7 +692,7 @@ export class World {
     if (!WEAPON[weapon] || team.ammo[weapon] === 0) weapon = WEAPONS.find((wp) => team.ammo[wp.id] !== 0)?.id ?? "skip";
     this.turn = {
       seq: (prev?.seq ?? 0) + 1, team: ti, worm: worm.id, phase: "play",
-      time: this.settings.turnTime * 60, retreat: 0, weapon, fuse: prev?.fuse ?? 3,
+      time: this.settings.turnTime * 60, ready: 180, retreat: 0, weapon, fuse: prev?.fuse ?? 3,
       power: 0, charging: false, shots: 0, ctrl: 0, fired: false, ropeLock: false, bungee: false,
       sub: "", subT: 0, sdDone: false, crateDone: false, winner: -1,
     };
@@ -704,7 +709,7 @@ export class World {
   // ---------- Netzwerk ----------
 
   turnView() {
-    const { subT, ...rest } = this.turn;
+    const { subT, ready, ...rest } = this.turn;
     rest.time = Math.ceil(rest.time / 60) * 60;
     rest.retreat = Math.ceil(rest.retreat / 60) * 60;
     return rest;
@@ -769,7 +774,7 @@ export class World {
     this.tick = m.k;
     if (m.e) for (const e of m.e) this.ents.set(e.id, e);
     if (m.rm) for (const id of m.rm) this.ents.delete(id);
-    if (m.tu) this.turn = { ...m.tu, subT: 0 };
+    if (m.tu) this.turn = { ...m.tu, subT: 0, ready: 0 };
     if (m.tm) this.teams = m.tm;
     if (m.g) {
       this.wind = m.g[0];

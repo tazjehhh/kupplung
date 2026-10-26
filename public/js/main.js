@@ -134,10 +134,17 @@ class App {
         if (m.room.phase === "lobby" && !m.room.players.some((p) => p.id === this.me)) this.toast("Der Raum ist voll – du schaust zu.");
         break;
       case "room": {
-        const before = new Set((this.room?.players ?? []).filter((p) => p.on).map((p) => p.id));
+        const prev = this.room?.players ?? [];
+        const before = new Set(prev.filter((p) => p.on).map((p) => p.id));
         this.room = m.room;
-        for (const p of m.room.players) {
-          if (p.on && !before.has(p.id) && this.room && p.id !== this.me && before.size) this.lobby.addChat("", 0, `${p.name} ist da.`, true);
+        if (before.size) {
+          const now = new Set(m.room.players.filter((p) => p.on).map((p) => p.id));
+          for (const p of m.room.players) {
+            if (now.has(p.id) && !before.has(p.id) && p.id !== this.me) this.lobby.addChat("", 0, `${p.name} ist da.`, true);
+          }
+          for (const p of prev) {
+            if (before.has(p.id) && !now.has(p.id)) this.lobby.addChat("", 0, `${p.name} ist gegangen.`, true);
+          }
         }
         this.onRoom();
         break;

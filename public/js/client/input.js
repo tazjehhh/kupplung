@@ -61,6 +61,8 @@ export class Input {
     c.app.sound.unlock();
     const tag = document.activeElement?.tagName;
     if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
+    // Sonst würde die Leertaste den zuletzt geklickten HUD-Knopf erneut auslösen
+    if (tag === "BUTTON") document.activeElement.blur();
     if (e.code === "Escape") {
       e.preventDefault();
       c.escape();

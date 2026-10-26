@@ -50,10 +50,14 @@ export class GameClient {
     }
     this.last = performance.now();
     requestAnimationFrame((ts) => this.frame(ts));
+    // Im Hintergrund-Tab pausiert requestAnimationFrame. Damit das Spiel für die anderen
+    // nicht einfriert, wenn der aktive Spieler den Tab wechselt, weiter simulieren.
+    this.bgTimer = setInterval(() => this.background(), 250);
   }
 
   destroy() {
     this.running = false;
+    clearInterval(this.bgTimer);
     this.input.destroy();
     window.removeEventListener("resize", this.onResize);
     this.sound.stopAll();
@@ -184,10 +188,10 @@ export class GameClient {
     this.auth = next;
   }
 
-  simulate(dt) {
+  simulate(dt, maxSteps = 6) {
     this.acc += dt;
     let steps = 0;
-    while (this.acc >= STEP && steps < 6) {
+    while (this.acc >= STEP && steps < maxSteps) {
       this.acc -= STEP;
       steps++;
       const w = this.world;
@@ -203,7 +207,16 @@ export class GameClient {
         if (!this.isAuth()) break;
       }
     }
-    if (steps >= 6) this.acc = 0;
+    if (steps >= maxSteps) this.acc = 0;
+  }
+
+  background() {
+    if (!document.hidden || !this.running) return;
+    const now = performance.now();
+    const dt = Math.min(1.5, (now - this.last) / 1000);
+    this.last = now;
+    if (this.isAuth()) this.simulate(dt, 100);
+    this.processEvents(true);
   }
 
   // ---------- Hauptschleife ----------
@@ -266,12 +279,17 @@ export class GameClient {
     }
   }
 
-  processEvents() {
+  // quiet: nur das Gelände aktualisieren (Tab im Hintergrund), keine Effekte oder Sounds
+  processEvents(quiet = false) {
     const world = this.world;
     if (!world.events.length) return;
     const events = world.events;
     world.events = [];
     for (const ev of events) {
+      if (quiet) {
+        if (ev[0] === "x") this.renderer.terrain.carve(ev[1], ev[2], ev[3]);
+        continue;
+      }
       switch (ev[0]) {
         case "x": {
           const [, x, y, r, dmg] = ev;

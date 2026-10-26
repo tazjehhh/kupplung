@@ -133,3 +133,51 @@ test("Alle Waffen lassen sich abfeuern, ohne dass etwas abstürzt", async () => 
     assert.ok(world.turn.seq >= 2 || world.turn.phase === "over", `${wp.id}: Zug ist nicht weitergegangen`);
   }
 });
+
+test("Sudden Death lässt das Wasser steigen", () => {
+  const world = makeWorld({ sdMinutes: 5, waterRise: "schnell" });
+  world.gameTime = 5 * 3600;
+  const water = world.water;
+  world.endTurn();
+  runUntil(world, () => world.turn.seq === 2, 3000);
+  assert.equal(world.sd, true);
+  assert.ok(world.water <= water - 50, `Wasser ist nicht gestiegen (${water} → ${world.water})`);
+});
+
+test("Ölfass explodiert bei Treffer und hinterlässt Feuer", () => {
+  const world = makeWorld();
+  const barrel = world.spawn({ type: "barrel", x: 600, y: 300, vx: 0, vy: 0, hp: 40, rest: true });
+  world.terrain.mask.fill(0);
+  for (let y = 308; y < 330; y++) for (let x = 500; x < 700; x++) world.terrain.mask[y * world.w + x] = 1;
+  world.explode(610, 300, 30, 50);
+  world.step(null);
+  assert.equal(world.ents.has(barrel.id), false);
+  assert.ok([...world.ents.values()].some((e) => e.type === "fire"));
+});
+
+test("Kiste wird vom aktiven Wurm eingesammelt", () => {
+  const world = makeWorld();
+  const w = world.activeWorm();
+  const hp = w.hp;
+  world.spawn({ type: "crate", kind: "health", x: w.x + 5, y: w.y, vx: 0, vy: 0, chute: false });
+  world.step(null);
+  assert.equal(w.hp, hp + world.settings.crateHealth);
+});
+
+test("Bungee fängt den Wurm an einer Kante auf", () => {
+  const world = makeWorld({ fallDamage: true });
+  const t = world.terrain;
+  t.mask.fill(0);
+  for (let y = 300; y < 320; y++) for (let x = 300; x < 500; x++) t.mask[y * world.w + x] = 1;
+  const w = world.activeWorm();
+  w.x = 490; w.y = 300 - WORM_R - 0.5; w.mode = "stand"; w.face = 1;
+  world.turn.weapon = "bungee";
+  world.teams[world.turn.team].ammo.bungee = 1;
+  world.step({ fire: true, pressed: { fire: true } });
+  assert.equal(world.turn.bungee, true);
+  for (let i = 0; i < 60 && w.mode !== "bungee"; i++) world.step({ right: true, pressed: {} });
+  assert.equal(w.mode, "bungee");
+  for (let i = 0; i < 300; i++) world.step({ pressed: {} });
+  assert.equal(w.hp, world.settings.hp, "Bungee-Wurm hat Schaden genommen");
+  assert.ok(w.y < 420, "Wurm hängt nicht am Seil");
+});
