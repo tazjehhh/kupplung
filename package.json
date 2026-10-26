@@ -1,0 +1,11 @@
+{
+  "name": "wurmkrieg",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Worms-Klon für den Browser – online mit Freunden, Peer-to-Peer über WebRTC",
+  "scripts": {
+    "dev": "node scripts/serve.js",
+    "test": "node --test test/*.test.js"
+  }
+}

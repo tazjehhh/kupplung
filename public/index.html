@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Wurmkrieg</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪱</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Startbildschirm -->
+  <section id="menu" class="screen">
+    <div class="menu-card card">
+      <h1 class="logo">Wurm<span>krieg</span></h1>
+      <p class="tagline">Explosives Rundenchaos für bis zu 6 Freunde</p>
+      <label class="field">
+        <span>Dein Name</span>
+        <input id="menu-name" maxlength="16" autocomplete="nickname" placeholder="z. B. Kalle">
+      </label>
+      <button id="btn-create" class="btn big primary">Neuen Raum erstellen</button>
+      <div class="divider"><span>oder</span></div>
+      <div class="join-row">
+        <input id="menu-code" maxlength="8" placeholder="RAUMCODE" autocomplete="off" spellcheck="false">
+        <button id="btn-join" class="btn big">Beitreten</button>
+      </div>
+      <p id="menu-error" class="error"></p>
+    </div>
+  </section>
+
+  <!-- Lobby -->
+  <section id="lobby" class="screen hidden">
+    <header class="lobby-head">
+      <h1 class="logo small">Wurm<span>krieg</span></h1>
+      <div class="room-code">
+        <span>Raum</span>
+        <strong id="lobby-code">----</strong>
+        <button id="btn-copy" class="btn small">Link kopieren</button>
+      </div>
+      <button id="btn-leave" class="btn small ghost">Verlassen</button>
+    </header>
+    <div class="lobby-grid">
+      <div class="col">
+        <div class="card">
+          <h2>Spieler <small id="lobby-count"></small></h2>
+          <ul id="player-list" class="player-list"></ul>
+        </div>
+        <div class="card">
+          <h2>Dein Team</h2>
+          <label class="field"><span>Teamname</span><input id="team-name" maxlength="20"></label>
+          <div class="field"><span>Farbe</span><div id="color-picker" class="color-picker"></div></div>
+          <div class="field">
+            <span>Würmer <button id="btn-random-names" class="btn tiny">🎲 Zufall</button></span>
+            <div id="worm-names" class="worm-names"></div>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card">
+          <h2>Regeln <small id="settings-note"></small></h2>
+          <div id="settings" class="settings"></div>
+        </div>
+        <div class="card">
+          <h2>Waffen <small>Munition pro Team</small></h2>
+          <div id="ammo-presets" class="presets"></div>
+          <div id="ammo-grid" class="ammo-grid"></div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card chat-card">
+          <h2>Chat</h2>
+          <div id="lobby-chat" class="chat-log"></div>
+          <form id="lobby-chat-form" class="chat-form"><input maxlength="200" placeholder="Nachricht…"><button class="btn small">➤</button></form>
+        </div>
+        <div class="card start-card">
+          <button id="btn-start" class="btn big primary">Spiel starten</button>
+          <p id="start-note" class="note"></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Spiel -->
+  <section id="game" class="screen hidden">
+    <canvas id="canvas"></canvas>
+    <div id="hud">
+      <div class="hud-top">
+        <div id="hud-banner" class="banner"></div>
+        <div class="hud-buttons">
+          <button id="btn-mute" class="btn icon" title="Ton an/aus (M)">🔊</button>
+          <button id="btn-help" class="btn icon" title="Steuerung (H)">❓</button>
+          <button id="btn-menu" class="btn icon" title="Menü (Esc)">☰</button>
+        </div>
+      </div>
+      <div id="hud-chat" class="hud-chat"></div>
+      <form id="hud-chat-form" class="hud-chat-form hidden"><input maxlength="200" placeholder="Chat – Enter senden, Esc abbrechen"></form>
+      <div class="hud-bottom">
+        <div class="hud-left">
+          <button id="hud-weapon" class="weapon-box" title="Waffen (Rechtsklick oder Q)"></button>
+          <div id="hud-timer" class="timer"></div>
+        </div>
+        <div id="hud-teams" class="team-bars"></div>
+        <div class="hud-right">
+          <div id="hud-sd" class="sd-tag hidden">SUDDEN DEATH</div>
+          <div class="wind"><span>Wind</span><div class="wind-bar"><div id="hud-wind" class="wind-fill"></div></div></div>
+        </div>
+      </div>
+    </div>
+    <div id="weapon-menu" class="overlay-panel weapon-menu hidden"></div>
+    <div id="help" class="overlay-panel help hidden">
+      <h2>Steuerung</h2>
+      <table>
+        <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>Laufen</td></tr>
+        <tr><td><kbd>↑</kbd> <kbd>↓</kbd></td><td>Zielen</td></tr>
+        <tr><td><kbd>Enter</kbd></td><td>Sprung nach vorn</td></tr>
+        <tr><td><kbd>Backspace</kbd></td><td>Rückwärtssalto</td></tr>
+        <tr><td><kbd>Leertaste</kbd></td><td>Feuern (gedrückt halten = mehr Kraft)</td></tr>
+        <tr><td><kbd>1</kbd>–<kbd>5</kbd></td><td>Zünder für Granaten</td></tr>
+        <tr><td>Rechtsklick / <kbd>Q</kbd></td><td>Waffenmenü</td></tr>
+        <tr><td>Linksklick</td><td>Ziel setzen (Luftschlag, Teleport, Esel)</td></tr>
+        <tr><td>Maus ziehen / Mausrad</td><td>Kamera verschieben / zoomen</td></tr>
+        <tr><td><kbd>C</kbd></td><td>Kamera zurück zum Wurm</td></tr>
+        <tr><td><kbd>T</kbd></td><td>Chat</td></tr>
+        <tr><td><kbd>M</kbd> / <kbd>H</kbd></td><td>Ton / diese Hilfe</td></tr>
+      </table>
+      <button class="btn primary" data-close>Los geht's!</button>
+    </div>
+    <div id="game-menu" class="overlay-panel game-menu hidden">
+      <h2>Menü</h2>
+      <button id="btn-resume" class="btn big">Weiterspielen</button>
+      <button id="btn-abort" class="btn big">Spiel abbrechen (alle zurück zur Lobby)</button>
+      <button id="btn-quit" class="btn big ghost">Raum verlassen</button>
+    </div>
+    <div id="game-over" class="overlay-panel game-over hidden">
+      <div class="trophy">🏆</div>
+      <h2 id="over-title"></h2>
+      <p id="over-text"></p>
+      <button id="btn-over-lobby" class="btn big primary">Zurück zur Lobby</button>
+      <p id="over-wait" class="note">Warte auf den Host…</p>
+    </div>
+  </section>
+
+  <div id="loading" class="loading hidden"><div class="spinner"></div><p id="loading-text">Karte wird gebaut…</p></div>
+  <div id="toasts" class="toasts"></div>
+
+  <script src="vendor/peerjs.min.js"></script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
