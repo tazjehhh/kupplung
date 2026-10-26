@@ -97,6 +97,50 @@ Skipped:
 | Symbiotic | −33% TVL |
 | Bucket V2 | Bucket already has a token; DefiLlama's tagging looks incomplete |
 
+## Solana and Robinhood Chain (high-volume chains)
+
+30-day DEX volume from DefiLlama `/overview/dexs/{chain}`:
+
+| Chain | 30d DEX volume | vs prior 30d |
+|---|---|---|
+| Solana | **$62.2B** | −22% |
+| Ethereum | $37.1B | −14% |
+| Robinhood Chain | **$29.8B** | −47% |
+| Base | $29.0B | +8% |
+| BSC | $27.1B | −24% |
+| Hyperliquid L1 | $7.9B | −29% |
+
+**Excluded: Solana prop AMMs.** BisonFi, Tessera V, GoonFi, Scorch, SolFi, ZeroFi, AlphaQ, Aquifer and QuantumAMM top the tokenless volume list, but they are private market-maker pools with no user base to airdrop to.
+
+### Solana
+
+| Protocol | What it is | Data | Points / token |
+|---|---|---|---|
+| **Axiom** | Trading terminal (Solana plus Robinhood Chain) | **$30.6M fees / 30d**; $2.3B Solana volume | Axiom Points plus SOL rewards live. No token confirmed; the founder reportedly said in early 2025 there were no plans |
+| **Project 0** (ex-marginfi) | Lending / prime broker | $59M TVL; fees **+46%** MoM | **Token confirmed** (per MEXC). marginfi points carry over 1:1. TGE slipped past Q1 2026 |
+| **Exponent** | Yield trading (Pendle-style) | $61M TVL (−12%) | Points Hub says points decide the TGE allocation. XPN contract reportedly finalized. $5M seed led by Multicoin |
+| **Loopscale** | Lending | $91M TVL (**+10%**) | Points live |
+| **Hylo** | Leveraged-SOL stablecoin | $38M TVL; $390k fees | XP points |
+| **fomo** | Trading app | $15.8M fees; reportedly $94M raised | No points; referral fee-share only |
+| **GMGN** | Trading terminal | $15.7M fees | Thin prediction markets price a 2026 token at about 11–23% |
+| **BULK** (perps) | Perps | Fees +139% MoM | 30% of supply to community |
+
+Skipped: Byreal (said "not launching a native token at this stage") and Manifest (zero-fee orderbook, no program).
+
+### Robinhood Chain
+
+Mostly memecoin-driven, and volume nearly halved month over month.
+
+| Protocol | What it is | Data | Points / token |
+|---|---|---|---|
+| **Arcus** | Perps plus spot | See shortlist above | Season 1 points |
+| **Flap.sh** | Launchpad | $31.2M fees / 30d | Ran a 2024 airdrop; current token status unverified |
+| **Metric** | DEX, 14 days old | **$623M** RH volume / 30d | No info found yet. Earliest stage on the list |
+| **Accountable** | Uncollateralized lending | $2.1M fees on $1.3M TVL (TVL +80%) | No info found |
+| **Rialto** | Prop AMM | RH volume **+809%** | Prop AMM, likely no user airdrop |
+
+Fables held its TGE on 20 Oct, so it is excluded.
+
 ## Theme worth watching: Robinhood Chain
 
 Three of the highest-fee tokenless apps in the data run on Robinhood Chain:
