@@ -1,0 +1,15 @@
+{
+  "name": "wurmkrieg",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Worms-Klon für den Browser – online mit Freunden, läuft auf Cloudflare Workers",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "node --test test/*.test.js"
+  },
+  "devDependencies": {
+    "wrangler": "^4.153.0"
+  }
+}
