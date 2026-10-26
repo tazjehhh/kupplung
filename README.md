@@ -51,6 +51,10 @@ Diese Adresse öffnen, Namen eingeben, **Neuen Raum erstellen** und den Link an 
 Beim ersten Deploy fragt Cloudflare evtl. nach einer `workers.dev`-Subdomain, die kannst du frei wählen.
 Der Raum-Server nutzt Durable Objects mit SQLite-Speicher; die sind im kostenlosen Workers-Plan enthalten.
 
+**Automatisch deployen (optional):** Der GitHub-Workflow in `.github/workflows/deploy.yml` führt bei jedem Push die Tests aus
+und deployt Pushes auf `main` zu Cloudflare, sobald im Repo unter *Settings → Secrets and variables → Actions* die Secrets
+`CLOUDFLARE_API_TOKEN` (API-Token mit der Vorlage „Edit Cloudflare Workers“) und `CLOUDFLARE_ACCOUNT_ID` hinterlegt sind.
+
 ## Lokal entwickeln
 
 ```bash

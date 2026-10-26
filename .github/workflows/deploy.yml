@@ -1,0 +1,39 @@
+name: Test & Deploy
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+  # Optional: automatisch zu Cloudflare deployen, sobald auf main gepusht wird.
+  # Dafür im Repo unter Settings → Secrets → Actions anlegen:
+  #   CLOUDFLARE_API_TOKEN  (Token mit Vorlage "Edit Cloudflare Workers")
+  #   CLOUDFLARE_ACCOUNT_ID
+  deploy:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        if: env.CLOUDFLARE_API_TOKEN != ''
+      - uses: actions/setup-node@v4
+        if: env.CLOUDFLARE_API_TOKEN != ''
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci && npx wrangler deploy
+        if: env.CLOUDFLARE_API_TOKEN != ''

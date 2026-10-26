@@ -404,14 +404,14 @@ export class World {
       } else w.walkAcc = 0;
       if (w.mode === "stand" && inp.pressed.jump) {
         w.mode = "air";
-        w.vx = w.face * 2.1;
-        w.vy = -3.7;
+        w.vx = w.face * 1.6;
+        w.vy = -3.3;
         this.emit(["snd", "jump"]);
         if (t.bungee) startBungee(this, w);
       } else if (w.mode === "stand" && inp.pressed.back) {
         w.mode = "air";
-        w.vx = -w.face * 0.9;
-        w.vy = -5.6;
+        w.vx = -w.face * 0.8;
+        w.vy = -5.4;
         this.emit(["snd", "jump"]);
       }
     }
