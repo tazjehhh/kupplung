@@ -65,6 +65,38 @@ python3 tools/airdrop_screen.py data 5e6 score 60
 
 **7–9. Wildcat, Loopscale and Saturn** are real businesses without a token. These are speculative bets that a token appears at all.
 
+## Non-perps shortlist
+
+Same screen, but derivatives and liquid staking are excluded (`python3 tools/airdrop_screen.py` with those categories added to `EX`).
+
+| Protocol | Type, chain | TVL (30d) | Fees 30d (MoM) | Points / token status |
+|---|---|---|---|---|
+| **Tydro** + **Nado** | Lending (Aave V3 white-label) + spot DEX, Ink (Kraken's L2) | $133M (−3%) / $51M | $305k (**+38%**) | INK token **confirmed** by the Ink Foundation; it will be airdropped via Kraken Drops. A Tydro rep said points "represent claims on the first airdrop". Timing has slipped: Q2–Q3 2026 estimates, now late 2026 or 2027. Kraken's own *Ink Points* loyalty program is non-redeemable, so don't confuse the two |
+| **CIAN Yield Layer** | Yield vaults, ETH/Mantle/Arbitrum | $314M (+4%) | $723k (**+52%**) | Voyage Points; token announced but not deployed |
+| **infiniFi** | Yield, ETH/Monad/Base | $69M (**+37%**) | $332k (+18%) | TGE Q4 2026; boosted points |
+| **Saturn** | STRC-backed stablecoin, ETH | $157M (+9%) | $1.1M (−42%) | Season 1 ended in Aug; check for Season 2. Backed by YZi Labs |
+| **Curvance** | Lending, Monad | $131M (+29% 7d) | $382k | CVE tokenomics published; TGE overdue |
+| **Current** | Lending, Sui | $56M (+6%) | $223k (**+30%**) | None found |
+| **Aegis YUSD** | BTC-backed stablecoin, ETH/BSC | $34M (−1%) | $143k (**+255%**) | Aegis Points; 0.2% of AEG supply distributed weekly (per 2025 docs) |
+| **Mellow** | Restaking vaults | $23M (−13%) | **$2.2M** (+23%) | Points for 2+ years and still no token. Farming fatigue |
+| **Yuzu Money** | Stablecoin yield, Plasma/Monad | $78M (−1%) | $558k (+11%) | $YUZU referenced; status unclear |
+| **Fluxion** | RWA spot DEX, Mantle | $7M (−2%) | $238k (**+149%**) | Fluxion Points paid via Mantle Vault; no token info |
+| **Wildcat** | Uncollateralized credit, ETH/Plasma | $6M (**+49%**) | $1.4M | No program found |
+| **Loopscale** | Lending, Solana | $91M (+10%) | $293k | Points live |
+| **Fira** | Fixed-rate lending (Euler spin-out), ETH | $10M (**+35%**) | $36k | None found |
+| **Flap.sh** | Memecoin launchpad, BSC + Robinhood Chain | $4M | **$31.2M** (−19%) | A 2024 airdrop ran; current token status unclear. Verify before farming |
+
+Skipped:
+
+| Protocol | Why |
+|---|---|
+| Temple | Institutional venue; no token |
+| Gondi | Exploited Mar 2026; no program |
+| Legion | A LEGION token already appears to exist |
+| Stellar DeFi Hub | No fees |
+| Symbiotic | −33% TVL |
+| Bucket V2 | Bucket already has a token; DefiLlama's tagging looks incomplete |
+
 ## Theme worth watching: Robinhood Chain
 
 Three of the highest-fee tokenless apps in the data run on Robinhood Chain:
