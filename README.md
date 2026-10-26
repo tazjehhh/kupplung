@@ -26,7 +26,7 @@ Kein Server, kein Account, keine Kosten.
 | `←` `→` | Laufen |
 | `↑` `↓` | Zielen |
 | `Enter` | Sprung nach vorn |
-| `Backspace` | Rückwärtssalto |
+| `Enter` `Enter` | Rückwärtssalto (schnell doppelt drücken, oder `Backspace`) |
 | `Leertaste` | Feuern (gedrückt halten = mehr Kraft) |
 | `1`–`5` | Zünder für Granaten |
 | Rechtsklick / `Q` | Waffenmenü |

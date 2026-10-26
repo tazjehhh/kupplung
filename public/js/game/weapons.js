@@ -109,6 +109,7 @@ export function useWeapon(world, w, id, opts) {
       return { ok: true, end: "none" };
     case "jetpack":
       w.mode = "jet";
+      w.jumpY = null;
       w.fuel = JET_FUEL;
       w.jetT = 0;
       w.vy = -1.8;
@@ -254,6 +255,7 @@ export function shootRope(world, w) {
     return false;
   }
   w.mode = "rope";
+  w.jumpY = null;
   const len = Math.hypot(w.x - hit.px, w.y - hit.py);
   // Vom Boden aus etwas straffen, damit der Wurm frei hängt
   w.rope = { p: [[hit.px, hit.py, 0]], len: Math.max(10, grounded(world, w) ? len - 10 : len) };

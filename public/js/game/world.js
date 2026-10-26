@@ -1,4 +1,4 @@
-import { MAP_SIZES, THEMES, PROJECTILES, WORM_R, WALK_SPEED, ROPE_MAX } from "./const.js";
+import { MAP_SIZES, THEMES, PROJECTILES, WORM_R, WALK_SPEED, ROPE_MAX, JUMP_PREP } from "./const.js";
 import { Rng } from "./rng.js";
 import { Terrain } from "./terrain.js";
 import { generateMap } from "./mapgen.js";
@@ -204,6 +204,8 @@ export class World {
     }
     e.rest = false;
     if (e.type === "worm") {
+      e.jumpY = null;
+      e.jumpPrep = 0;
       e.rope = null;
       e.bng = null;
       e.thr = false;
@@ -379,7 +381,11 @@ export class World {
     }
 
     this.aim(w, inp);
-    if (!t.charging && !t.shots) {
+    if (w.jumpPrep > 0) {
+      // Wurm holt aus; zweites Enter (oder Backspace) macht daraus einen Rückwärtssalto
+      if (inp.pressed.jump || inp.pressed.back) w.jumpKind = "back";
+      if (--w.jumpPrep === 0) this.jump(w, w.jumpKind);
+    } else if (!t.charging && !t.shots) {
       const dir = inp.left ? -1 : inp.right ? 1 : 0;
       if (dir) {
         w.face = dir;
@@ -402,20 +408,26 @@ export class World {
           }
         }
       } else w.walkAcc = 0;
-      if (w.mode === "stand" && inp.pressed.jump) {
-        w.mode = "air";
-        w.vx = w.face * 1.6;
-        w.vy = -3.3;
-        this.emit(["snd", "jump"]);
-        if (t.bungee) startBungee(this, w);
-      } else if (w.mode === "stand" && inp.pressed.back) {
-        w.mode = "air";
-        w.vx = -w.face * 0.8;
-        w.vy = -5.4;
-        this.emit(["snd", "jump"]);
+      if (w.mode === "stand" && (inp.pressed.jump || inp.pressed.back)) {
+        w.jumpPrep = JUMP_PREP;
+        w.jumpKind = inp.pressed.jump ? "fwd" : "back";
       }
     }
-    if (t.phase === "play" && !t.fired && w.mode === "stand") this.handleFire(w, inp);
+    if (t.phase === "play" && !t.fired && w.mode === "stand" && !w.jumpPrep) this.handleFire(w, inp);
+  }
+
+  jump(w, kind) {
+    w.mode = "air";
+    w.jumpY = w.y;
+    if (kind === "back") {
+      w.vx = -w.face * 0.9;
+      w.vy = -6.1;
+    } else {
+      w.vx = w.face * 2.1;
+      w.vy = -4;
+    }
+    this.emit(["snd", kind === "back" ? "flip" : "jump"]);
+    if (this.turn.bungee) startBungee(this, w);
   }
 
   canSelect(id) {
@@ -510,6 +522,7 @@ export class World {
     t.bungee = false;
     t.shots = 0;
     const w = this.activeWorm();
+    if (w) w.jumpPrep = 0;
     if (w && (w.mode === "rope" || w.mode === "jet" || w.mode === "bungee")) {
       w.mode = "air";
       w.rope = null;

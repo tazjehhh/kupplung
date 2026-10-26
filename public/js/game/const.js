@@ -9,6 +9,8 @@ export const MAX_THROW = 15;
 export const FALL_DAMAGE_SPEED = 7.2;
 export const ROPE_MAX = 420;
 export const JET_FUEL = 330;
+// Ausholen vor dem Sprung in Ticks; ein zweites Enter in dieser Zeit wird zum Rückwärtssalto
+export const JUMP_PREP = 11;
 
 export const MAP_SIZES = {
   small: { w: 1800, h: 960 },

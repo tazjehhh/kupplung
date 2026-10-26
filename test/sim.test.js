@@ -181,3 +181,30 @@ test("Bungee fängt den Wurm an einer Kante auf", () => {
   assert.equal(w.hp, world.settings.hp, "Bungee-Wurm hat Schaden genommen");
   assert.ok(w.y < 420, "Wurm hängt nicht am Seil");
 });
+
+test("Enter springt nach vorn, doppeltes Enter macht einen Rückwärtssalto", () => {
+  for (const double of [false, true]) {
+    const world = makeWorld();
+    const t = world.terrain;
+    t.mask.fill(0);
+    for (let y = 400; y < 420; y++) for (let x = 100; x < 1200; x++) t.mask[y * world.w + x] = 1;
+    const w = world.activeWorm();
+    w.x = 500; w.y = 400 - WORM_R - 0.5; w.face = 1; w.mode = "stand";
+    world.step({ pressed: { jump: true } });
+    for (let i = 0; i < 4; i++) world.step({ pressed: {} });
+    if (double) world.step({ pressed: { jump: true } });
+    let minY = w.y;
+    for (let i = 0; i < 120; i++) {
+      world.step({ pressed: {} });
+      minY = Math.min(minY, w.y);
+    }
+    assert.equal(w.mode, "stand");
+    if (double) {
+      assert.ok(w.x < 480, `Salto ging nicht rückwärts (x=${w.x})`);
+      assert.ok(392.5 - minY > 50, "Salto zu niedrig");
+    } else {
+      assert.ok(w.x > 540, `Sprung ging nicht nach vorn (x=${w.x})`);
+    }
+    assert.equal(w.hp, world.settings.hp, "Sprung auf flachem Boden darf keinen Schaden machen");
+  }
+});

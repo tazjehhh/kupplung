@@ -50,6 +50,14 @@ export class Effects {
     }
   }
 
+  // Staubwolke an den Füßen (Absprung, Landung)
+  dust(x, y, n = 6) {
+    for (let i = 0; i < n; i++) {
+      const dir = i % 2 ? 1 : -1;
+      this.add({ kind: "smoke", x: x + dir * Math.random() * 4, y, vx: dir * (0.6 + Math.random() * 1.2), vy: -0.2 - Math.random() * 0.5, size: 2.5 + Math.random() * 2.5, life: 0.35 + Math.random() * 0.25, shade: 225 });
+    }
+  }
+
   splash(x, y, size = 1) {
     for (let i = 0; i < 14 * size; i++) {
       this.add({ kind: "drop", x: x + (Math.random() - 0.5) * 10, y, vx: (Math.random() - 0.5) * 3, vy: -2 - Math.random() * 4 * size, size: 2 + Math.random() * 2.5, life: 1.2, grav: 0.2 });

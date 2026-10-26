@@ -1,5 +1,5 @@
 import { World } from "../game/world.js";
-import { PROJECTILES, TEAM_COLORS } from "../game/const.js";
+import { PROJECTILES, TEAM_COLORS, JUMP_PREP } from "../game/const.js";
 import { WEAPON } from "../game/weapons.js";
 import { Renderer } from "./renderer.js";
 import { Effects } from "./effects.js";
@@ -245,6 +245,7 @@ export class GameClient {
       world: this.world, cam: this.cam, fx: this.fx, dt, target,
       pos: (e) => this.rpos.get(e.id) ?? e,
       moving: (e) => performance.now() - (this.rpos.get(e.id)?.movedAt ?? 0) < 150,
+      anim: (e) => this.wormAnim(e),
       showArrow: performance.now() < this.arrowUntil,
     });
     this.hud.update(this.world, this.myTurn());
@@ -408,10 +409,69 @@ export class GameClient {
       }
       if (Math.abs(e.x - r.px) > 0.05) r.movedAt = now;
       r.px = e.x;
+      if (e.type === "worm") this.trackJump(e, r, now);
     }
     if (this.rpos.size > this.world.ents.size + 50) {
       for (const id of this.rpos.keys()) if (!this.world.ents.has(id)) this.rpos.delete(id);
     }
+  }
+
+  // Absprung und Landung erkennen (funktioniert auch bei Zuschauern über die Updates)
+  trackJump(w, r, now) {
+    const was = r.mode;
+    r.mode = w.mode;
+    if (was === "stand" && w.mode === "air" && w.vy < -2) {
+      this.fx.dust(w.x, w.y + 7, 5);
+      // Rückwärtssalto: Sprung entgegen der Blickrichtung
+      if (w.vy < -5 && Math.sign(w.vx) === -w.face) {
+        r.flipT = now;
+        r.flipDir = -w.face;
+      }
+    } else if ((was === "air" || was === "fly") && w.mode === "stand") {
+      const impact = Math.max(0, r.vy ?? 0);
+      if (impact > 2) {
+        r.landT = now;
+        r.landK = Math.min(1, impact / 7);
+        this.fx.dust(w.x, w.y + 7, Math.round(4 + impact));
+        this.sound.play("land");
+        if (impact > 5) this.fx.shake = Math.max(this.fx.shake, 2.5);
+      }
+      r.flipT = 0;
+    }
+    if (w.mode !== "stand") r.vy = w.vy;
+  }
+
+  // Strecken im Flug, Stauchen nach der Landung, Drehung beim Salto
+  wormAnim(w) {
+    const r = this.rpos.get(w.id);
+    const now = performance.now();
+    let sx = 1;
+    let sy = 1;
+    let rot = 0;
+    if (w.mode === "air") {
+      const s = Math.min(0.18, Math.abs(w.vy) * 0.03);
+      sy = 1 + s;
+      sx = 1 - s * 0.6;
+    } else if (w.jumpPrep > 0) {
+      // In die Knie gehen vor dem Absprung
+      const p = 1 - w.jumpPrep / JUMP_PREP;
+      sy = 1 - 0.24 * p;
+      sx = 1 + 0.16 * p;
+    }
+    if (r?.landT) {
+      const t = (now - r.landT) / 260;
+      if (t < 1) {
+        // gedämpftes Nachfedern
+        const k = r.landK * Math.cos(t * Math.PI * 1.6) * (1 - t) ** 2;
+        sy = 1 - 0.32 * k;
+        sx = 1 + 0.26 * k;
+      }
+    }
+    if (r?.flipT && w.mode === "air") {
+      const t = Math.min(1, (now - r.flipT) / 620);
+      rot = r.flipDir * t * Math.PI * 2;
+    }
+    return { sx, sy, rot };
   }
 
   // ---------- Kamera ----------

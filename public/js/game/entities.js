@@ -27,6 +27,7 @@ export function updateWorm(world, w) {
   switch (w.mode) {
     case "stand":
       if (!grounded(world, w)) {
+        w.jumpPrep = 0;
         const t = world.turn;
         if (t.bungee && t.worm === w.id && (t.phase === "play" || t.phase === "retreat")) startBungee(world, w);
         else w.mode = "air";
@@ -50,6 +51,7 @@ export function updateWorm(world, w) {
 
 export function startBungee(world, w) {
   world.turn.bungee = false;
+  w.jumpY = null;
   w.mode = "bungee";
   w.bng = { ax: Math.round(w.x), ay: Math.round(w.y - 4), len: 24 };
   world.emit(["snd", "rope"]);
@@ -58,6 +60,7 @@ export function startBungee(world, w) {
 function land(world, w) {
   w.vx = 0;
   w.vy = 0;
+  w.jumpY = null;
   w.mode = "stand";
   w.rope = null;
   w.bng = null;
@@ -83,8 +86,16 @@ function moveWorm(world, w, onHit, slide = false) {
   return hits > 0;
 }
 
+// Sprünge fühlen sich schwerer an, wenn die Schwerkraft im Sprungbogen stärker zieht
+// (vor allem beim Runterfallen). Unterhalb der Absprunghöhe gilt wieder die normale
+// Schwerkraft, damit sich der Fallschaden nicht ändert.
+const JUMP_GRAVITY_UP = 1.55;
+const JUMP_GRAVITY_DOWN = 1.9;
+
 function airPhysics(world, w) {
-  w.vy = Math.min(w.vy + GRAVITY, 16);
+  let g = GRAVITY;
+  if (w.jumpY != null && w.y < w.jumpY + 2) g *= w.vy < 0 ? JUMP_GRAVITY_UP : JUMP_GRAVITY_DOWN;
+  w.vy = Math.min(w.vy + g, 16);
   moveWorm(world, w, (n) => {
     const impact = -(w.vx * n.x + w.vy * n.y);
     if (n.y < -0.5) {

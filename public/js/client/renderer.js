@@ -592,13 +592,17 @@ export class Renderer {
     const t = this.time;
     const moving = s.moving(w);
     if (active) this.drawHeldWeapon(ctx, w, p, world);
+    const anim = s.anim(w);
     ctx.save();
     ctx.translate(p.x, p.y);
     let tilt = 0;
     if (w.mode === "fly") tilt = Math.max(-0.9, Math.min(0.9, w.vx * 0.18));
     else if (w.mode === "air" || w.mode === "jet" || w.mode === "bungee" || w.mode === "rope") tilt = Math.max(-0.4, Math.min(0.4, w.vx * 0.08));
-    ctx.rotate(tilt);
-    ctx.scale(w.face, 1);
+    ctx.rotate(tilt + anim.rot);
+    // Strecken/Stauchen mit den Füßen als Ankerpunkt
+    ctx.translate(0, 7);
+    ctx.scale(w.face * anim.sx, anim.sy);
+    ctx.translate(0, -7);
     const bob = moving ? Math.abs(Math.sin(t * 14)) * -1.6 : Math.sin(t * 2.2 + w.id) * 0.5;
 
     if (w.mode === "jet") {
