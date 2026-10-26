@@ -46,7 +46,10 @@ class App {
     $("menu-name").value = this.profile.name;
     $("btn-create").onclick = () => this.enter(makeCode(), true);
     $("btn-join").onclick = () => this.enter($("menu-code").value);
-    $("menu-code").onkeydown = (e) => e.key === "Enter" && this.enter($("menu-code").value);
+    // Nicht als onkeydown-Rückgabewert: "false" würde jeden Tastendruck im Feld blockieren
+    $("menu-code").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") this.enter($("menu-code").value);
+    });
     for (const type of ["pointerdown", "keydown"]) document.addEventListener(type, () => this.sound.unlock());
     // Der Raum läuft im Tab des Gastgebers: versehentliches Schließen abfangen
     window.addEventListener("beforeunload", (e) => {
