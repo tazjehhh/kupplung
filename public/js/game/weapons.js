@@ -68,22 +68,27 @@ export function useWeapon(world, w, id, opts) {
     case "bazooka":
       throwProjectile(world, w, "missile", opts.power);
       world.emit(["snd", "launch"]);
+      world.voice(w.id, "fire", 0.4);
       return { ok: true, end: "retreat" };
     case "grenade":
     case "cluster":
     case "banana":
       throwProjectile(world, w, id, opts.power, { fuse: t.fuse * 60 });
       world.emit(["snd", "throw"]);
+      world.voice(w.id, id === "banana" ? "cover" : "grenade", 0.5);
       return { ok: true, end: "retreat" };
     case "holy":
       throwProjectile(world, w, "holy", opts.power, { fuse: 180 });
       world.emit(["snd", "throw"]);
+      world.voice(w.id, "cover", 0.7);
       return { ok: true, end: "retreat" };
     case "dynamite":
       world.spawn({ type: "dynamite", x: w.x + w.face * 6, y: w.y, vx: w.face * 0.6, vy: -1.5, fuse: 300, own: w.id, age: 0 });
       world.emit(["snd", "fuse"]);
+      world.voice(w.id, "cover", 0.7);
       return { ok: true, end: "retreat" };
     case "shotgun":
+      if (!t.shots) world.voice(w.id, "fire", 0.25);
       shotgun(world, w);
       return { ok: true, end: "shot" };
     case "bat":
@@ -95,11 +100,13 @@ export function useWeapon(world, w, id, opts) {
     case "airstrike":
       if (!opts.target) return { ok: false };
       airstrike(world, w, opts.target);
+      warnNearest(world, w, opts.target);
       return { ok: true, end: "retreat" };
     case "donkey":
       if (!opts.target) return { ok: false };
       world.spawn({ type: "donkey", x: clampX(world, opts.target.x), y: -60, vx: 0, vy: 2, hits: 0, age: 0 });
       world.emit(["snd", "donkey"]);
+      warnNearest(world, w, opts.target);
       return { ok: true, end: "retreat" };
     case "teleport":
       if (!opts.target) return { ok: false };
@@ -128,12 +135,26 @@ export function useWeapon(world, w, id, opts) {
       });
       if (world.terrain.circleHits(p.x, p.y, 5)) p.x = w.x;
       world.emit(["snd", id === "oldwoman" ? "granny" : "baa"]);
+      world.voice(w.id, "cover", 0.4);
       return { ok: true, end: "ctrl", ctrl: p.id };
     }
     case "skip":
+      world.emit(["snd", "skip"]);
+      world.voice(world.randomWorm((o) => o.team !== w.team)?.id, "coward", 0.8);
       return { ok: true, end: "settle" };
   }
   return { ok: false };
+}
+
+// Der gegnerische Wurm, der dem Ziel am nächsten ist, ruft "Incoming!"
+function warnNearest(world, w, target) {
+  let best = null;
+  for (const o of world.worms()) {
+    if (o.team === w.team || o.dead || o.drown) continue;
+    const d = Math.abs(o.x - target.x);
+    if (d < 160 && (!best || d < Math.abs(best.x - target.x))) best = o;
+  }
+  if (best) world.voice(best.id, "incoming", 0.8);
 }
 
 function clampX(world, x) {
@@ -184,6 +205,7 @@ function bat(world, w) {
     if (e.type === "worm") {
       world.damage(e, 30);
       world.knock(e, dir.x * 9.5, dir.y * 9.5 - 1.5, true);
+      e.batHit = world.tick;
       world.emit(["fx", "hit", Math.round(e.x), Math.round(e.y)]);
     } else if (world.isKnockable(e)) {
       world.knock(e, dir.x * 8, dir.y * 8 - 1.5, true);
@@ -195,6 +217,7 @@ function punch(world, w) {
   const x0 = Math.min(w.x + w.face * 2, w.x + w.face * 28);
   const x1 = Math.max(w.x + w.face * 2, w.x + w.face * 28);
   world.emit(["snd", "punch"]);
+  world.voice(w.id, "punch");
   for (const e of world.ents.values()) {
     if (e === w || e.dead || e.drown) continue;
     if (e.x < x0 || e.x > x1 || e.y < w.y - 40 || e.y > w.y + 10) continue;
@@ -232,6 +255,7 @@ function teleport(world, w, target) {
   const ok = x > 12 && x < world.w - 12 && y > 12 && y < world.water - 20 && !world.terrain.circleHits(x, y, WORM_R + 1);
   if (!ok) {
     world.emit(["say", w.id, "Da pass ich nicht hin!"]);
+    world.emit(["snd", "denied"]);
     return false;
   }
   world.emit(["fx", "tele", Math.round(w.x), Math.round(w.y), Math.round(x), Math.round(y)]);
@@ -259,6 +283,7 @@ export function shootRope(world, w) {
   const len = Math.hypot(w.x - hit.px, w.y - hit.py);
   // Vom Boden aus etwas straffen, damit der Wurm frei hängt
   w.rope = { p: [[hit.px, hit.py, 0]], len: Math.max(10, grounded(world, w) ? len - 10 : len) };
+  world.emit(["snd", "ropeattach"]);
   return true;
 }
 

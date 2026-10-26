@@ -35,6 +35,7 @@ class App {
     sessionStorage.setItem("wk.pid", this.me);
     this.profile = this.loadProfile();
     this.sound = new Sound();
+    this.sound.preload();
     this.net = null;
     this.room = null;
     this.game = null;
@@ -74,6 +75,7 @@ class App {
       name: typeof p.name === "string" ? p.name : "",
       color: Number.isInteger(p.color) ? p.color : -1,
       team: {
+        voice: typeof p.team?.voice === "string" ? p.team.voice : "",
         name: p.team?.name || randomTeamName(),
         worms: worms.length >= 8 ? worms.slice(0, 8) : [...worms, ...randomWormNames(8)].slice(0, 8),
       },

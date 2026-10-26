@@ -16,7 +16,8 @@ Kein Server, kein Account, keine Kosten.
 - Wind, Fallschaden, Wasser, **Waffen- und Gesundheitskisten**, **Minen & Ölfässer** mit Kettenreaktionen
 - **Sudden Death** mit steigendem Wasser
 - **Einstellbare Regeln** in der Lobby: Würmer pro Team, Lebenspunkte, Zugzeit, Kartengröße, Munition pro Waffe, …
-- Sound wird live im Browser erzeugt (keine Audiodateien)
+- Echte Sound-Samples und **Wurm-Stimmen in 9 Varianten** (Pirat, Brite, Mafioso, Roboter …), pro Team in der Lobby wählbar,
+  mit deutschen Sprechblasen
 - Übungsmodus: allein starten und Waffen ausprobieren
 
 ## Steuerung
@@ -82,3 +83,12 @@ test/                   Tests (node --test)
 
 **Grenzen:** Schließt der Gastgeber seinen Tab endgültig, ist der Raum für alle beendet. In sehr strengen Netzwerken
 (manche Firmen- oder Uni-WLANs) kann der Verbindungsaufbau scheitern.
+
+## Sounds
+
+Die Sounds und Stimmen stammen aus den freien Worms-Klonen [Hedgewars](https://hedgewars.org/) (GFDL 1.3)
+und Warmux (GPL 2+). Herkunft, Autoren und Lizenztexte stehen in `public/sounds/CREDITS.md` und
+`public/sounds/LICENSES/`; umgewandelt wurden sie mit `scripts/build-sounds.py`.
+Wer die Sounds weiterverwendet, muss diese Lizenzen beachten (Namensnennung, gleiche Lizenz für die Sounds).
+Solange ein Sample noch lädt, erzeugt das Spiel einen Ersatzklang per Web Audio.
+

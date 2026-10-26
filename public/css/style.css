@@ -127,6 +127,9 @@ select:disabled, input:disabled { background: var(--paper-2); opacity: 0.85; }
 .color-picker button.active { outline: 3px solid var(--ink); outline-offset: 3px; }
 .color-picker button:disabled { opacity: 0.25; cursor: not-allowed; }
 
+.voice-row { display: flex; gap: 8px; }
+.voice-row select { flex: 1; }
+
 .worm-names { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .worm-names input { padding: 5px 8px; font-size: 0.9rem; }
 

@@ -18,7 +18,7 @@ function cleanText(value, max) {
 function cleanTeam(team) {
   if (!team || typeof team !== "object") return null;
   const worms = Array.isArray(team.worms) ? team.worms.slice(0, 8).map((w) => cleanText(w, MAX_NAME)) : [];
-  return { name: cleanText(team.name, 20), worms };
+  return { name: cleanText(team.name, 20), worms, voice: cleanText(team.voice, 20) };
 }
 
 export class HostRoom {

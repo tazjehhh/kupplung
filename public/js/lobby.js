@@ -1,4 +1,4 @@
-import { TEAM_COLORS, TEAM_COLOR_NAMES } from "./game/const.js";
+import { TEAM_COLORS, TEAM_COLOR_NAMES, VOICE_PACKS, VOICE_NAMES } from "./game/const.js";
 import { WEAPONS, CATEGORIES } from "./game/weapons.js";
 import { normalizeSettings, AMMO_PRESETS } from "./game/settings.js";
 import { randomWormNames } from "./names.js";
@@ -141,6 +141,16 @@ export class Lobby {
       profile.team.name = teamName.value;
       this.queueTeamUpdate();
     };
+    const voice = $("team-voice");
+    voice.append(option("", "Automatisch"));
+    for (const id of VOICE_PACKS) voice.append(option(id, VOICE_NAMES[id]));
+    voice.value = profile.team.voice ?? "";
+    voice.onchange = () => {
+      profile.team.voice = voice.value;
+      this.queueTeamUpdate();
+      if (voice.value) this.app.sound.preview(voice.value);
+    };
+    $("btn-voice-preview").onclick = () => this.app.sound.preview(voice.value || VOICE_PACKS[0]);
     $("btn-random-names").onclick = () => {
       profile.team.worms = randomWormNames(8);
       this.renderWormInputs(true);

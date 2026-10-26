@@ -27,3 +27,10 @@ export const PROJECTILES = new Set([
   "missile", "grenade", "cluster", "clusterlet", "banana", "bananalet", "holy",
   "dynamite", "airmissile", "sheep", "supersheep", "oldwoman", "donkey",
 ]);
+
+// Stimmpakete (Hedgewars), Reihenfolge = Standardzuteilung nach Teamnummer
+export const VOICE_PACKS = ["Default", "Pirate", "British", "Mobster", "Surfer", "Robot", "Classic", "Singer", "Russian"];
+export const VOICE_NAMES = {
+  Default: "Standard", Pirate: "Pirat", British: "Brite", Mobster: "Mafioso", Surfer: "Surfer",
+  Robot: "Roboter", Classic: "Klassisch", Singer: "Sänger", Russian: "Russe",
+};

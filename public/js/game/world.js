@@ -1,4 +1,4 @@
-import { MAP_SIZES, THEMES, PROJECTILES, WORM_R, WALK_SPEED, ROPE_MAX, JUMP_PREP } from "./const.js";
+import { MAP_SIZES, THEMES, PROJECTILES, WORM_R, WALK_SPEED, ROPE_MAX, JUMP_PREP, VOICE_PACKS } from "./const.js";
 import { Rng } from "./rng.js";
 import { Terrain } from "./terrain.js";
 import { generateMap } from "./mapgen.js";
@@ -9,8 +9,6 @@ import { normalizeSettings, CRATE_CHANCE, WATER_RISE } from "./settings.js";
 
 const KNOCKABLE = new Set(["worm", "grenade", "cluster", "banana", "holy", "dynamite", "sheep", "oldwoman", "supersheep", "mine", "barrel", "crate", "grave"]);
 
-const DEATH_LINES = ["Tschüss!", "Ich komme wieder…", "Mama?", "Das war's wohl.", "Rächt mich!", "Autsch…"];
-const START_LINES = ["Los geht's!", "Jetzt bin ich dran!", "Auf sie mit Gebrüll!", "Mal sehen…", "Zeit für Rache!", "Hehehe…"];
 
 // Rundet Fließkommazahlen beim Serialisieren auf zwei Nachkommastellen.
 export function roundReplacer(key, value) {
@@ -46,11 +44,12 @@ export class World {
     world.gameTime = 0;
     world.sd = false;
     world.turn = { seq: 0, fuse: 3 };
-    world.teams = players.map((p) => ({
+    world.teams = players.map((p, i) => ({
       pid: p.id,
       player: p.name,
       name: p.team?.name || `Team ${p.name}`,
       color: p.color,
+      voice: VOICE_PACKS.includes(p.team?.voice) ? p.team.voice : VOICE_PACKS[i % VOICE_PACKS.length],
       ammo: { ...s.ammo },
       next: 0,
       last: "bazooka",
@@ -110,6 +109,7 @@ export class World {
     this.gameTime = cp.gameTime;
     this.sd = cp.sd;
     this.practice = cp.practice;
+    this.firstBlood = !!cp.firstBlood;
     this.settings = normalizeSettings(cp.settings);
     this.teams = cp.teams.map((t) => ({ ...t, ammo: { ...t.ammo } }));
     this.turn = { ...cp.turn };
@@ -120,7 +120,7 @@ export class World {
     return {
       v: 1, w: this.w, h: this.h, theme: this.theme, style: this.style, orig: this.orig,
       mask: this.terrain.encode(), tick: this.tick, nextId: this.nextId, rng: this.rng.s,
-      wind: this.wind, water: this.water, gameTime: this.gameTime, sd: this.sd, practice: this.practice,
+      wind: this.wind, water: this.water, gameTime: this.gameTime, sd: this.sd, practice: this.practice, firstBlood: !!this.firstBlood,
       settings: this.settings, teams: this.teams, turn: this.turn, ents: [...this.ents.values()],
     };
   }
@@ -141,6 +141,16 @@ export class World {
   emit(ev) {
     this.events.push(ev);
     this.outbox.push(ev);
+  }
+
+  // Ein Wurm sagt etwas; welcher Satz genau, entscheidet der Client anhand der Teamstimme
+  voice(id, kind, chance = 1) {
+    if (id && (chance >= 1 || this.rng.next() < chance)) this.emit(["vo", id, kind]);
+  }
+
+  randomWorm(filter) {
+    const list = this.worms().filter((w) => !w.dead && !w.drown && w.hp > 0 && filter(w));
+    return list.length ? this.rng.pick(list) : null;
   }
 
   worms() {
@@ -227,12 +237,24 @@ export class World {
     }
   }
 
-  damage(w, amount) {
+  damage(w, amount, cause) {
     if (amount <= 0 || w.dead) return;
     const real = Math.min(w.hp, Math.round(amount));
     w.hp -= real;
-    if (real > 0) this.emit(["dmg", w.id, real]);
     const t = this.turn;
+    if (real > 0) {
+      this.emit(["dmg", w.id, real]);
+      if (cause === "fall") this.voice(w.id, "fall");
+      else if (cause === "drown") {
+        // eigener Ausruf beim Ertrinken
+      } else if (w.id === t.worm) this.voice(w.id, "self");
+      else if (w.team === t.team) this.voice(w.id, "friendly", 0.8);
+      else {
+        this.voice(w.id, real >= 30 ? "hurtbig" : "hurt");
+        t.hits = (t.hits ?? 0) + real;
+        this.teams[w.team].hurt = true;
+      }
+    }
     if (t.worm === w.id && (t.phase === "play" || t.phase === "retreat")) this.endTurn();
   }
 
@@ -310,6 +332,7 @@ export class World {
       else {
         this.gameTime++;
         if (--t.time <= 0) this.endTurn();
+        else if (t.time === 300) this.voice(t.worm, "hurry", 0.7);
       }
     } else if (t.phase === "retreat") {
       this.gameTime++;
@@ -345,6 +368,7 @@ export class World {
         if (inp.pressed.fire || inp.pressed.jump) {
           w.mode = "air";
           w.rope = null;
+          this.emit(["snd", "roperelease"]);
         }
         return;
       case "jet": {
@@ -419,6 +443,7 @@ export class World {
   jump(w, kind) {
     w.mode = "air";
     w.jumpY = w.y;
+    this.voice(w.id, "jump", 0.5);
     if (kind === "back") {
       w.vx = -w.face * 0.9;
       w.vy = -6.1;
@@ -480,6 +505,7 @@ export class World {
     const firstShot = !(wp.shots && t.shots > 0);
     if (firstShot) this.useAmmo(t.team, wp.id);
     if (wp.id === "rope") t.ropeLock = true;
+    if (!wp.util && wp.id !== "teleport" && wp.id !== "skip") t.attack = true;
     switch (res.end) {
       case "retreat":
         t.fired = true;
@@ -492,6 +518,7 @@ export class World {
       case "shot":
         if (firstShot) t.shots = wp.shots;
         t.shots -= 1;
+        if (t.shots > 0) this.emit(["snd", "reload"]);
         if (t.shots <= 0) {
           t.fired = true;
           this.startRetreat();
@@ -602,8 +629,11 @@ export class World {
           t.sub = "dying";
           t.dying = dying.id;
           t.subT = 0;
-          this.emit(["say", dying.id, this.rng.pick(DEATH_LINES)]);
-        } else t.sub = "win";
+          this.voice(dying.id, "die");
+        } else {
+          this.judgeShot();
+          t.sub = "win";
+        }
         break;
       }
       case "dying":
@@ -612,6 +642,11 @@ export class World {
           if (w && !w.dead) {
             w.dead = true;
             w.mode = "stand";
+            const shooter = this.activeWorm();
+            if (w.team !== t.team && shooter && !shooter.dead && shooter.hp > 0) {
+              this.voice(shooter.id, this.firstBlood ? "kill" : "firstblood", 0.9);
+              this.firstBlood = true;
+            }
             this.spawn({ type: "grave", x: w.x, y: w.y - 4, vx: 0, vy: -1.5, team: w.team });
             this.explode(w.x, w.y, 24, 20);
           }
@@ -625,6 +660,7 @@ export class World {
           t.phase = "over";
           t.winner = alive.length === 1 ? alive[0] : -1;
           this.emit(["over", t.winner]);
+          if (t.winner >= 0) this.voice(this.randomWorm((w) => w.team === t.winner)?.id, "victory");
           return;
         }
         t.sub = "sd";
@@ -711,7 +747,24 @@ export class World {
     };
     this.wind = this.settings.wind ? Math.round(this.rng.range(-1, 1) * 20) / 20 : 0;
     this.emit(["turn", ti, worm.id]);
-    if (this.rng.next() < 0.5) this.emit(["say", worm.id, this.rng.pick(START_LINES)]);
+    // Wurde das Team seit seinem letzten Zug getroffen, schwört es Rache
+    this.voice(worm.id, team.hurt ? "revenge" : "turn", 0.85);
+    team.hurt = false;
+  }
+
+  // Nach dem Zug: Daneben geschossen oder ein Volltreffer?
+  judgeShot() {
+    const t = this.turn;
+    if (t.judged || !t.attack) return;
+    t.judged = true;
+    const w = this.activeWorm();
+    if (!w || w.dead || w.hp <= 0) return;
+    if (!t.hits) {
+      this.voice(w.id, "missed", 0.75);
+      this.voice(this.randomWorm((o) => o.team !== t.team)?.id, "laugh", 0.35);
+    } else if (t.hits >= 60) {
+      this.voice(w.id, "great", 0.85);
+    }
   }
 
   // Aktiven Zug sofort beenden (z. B. wenn der Spieler das Spiel verlassen hat)

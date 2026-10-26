@@ -5,9 +5,9 @@ import { Renderer } from "./renderer.js";
 import { Effects } from "./effects.js";
 import { Input } from "./input.js";
 import { Hud } from "./hud.js";
+import { SUBTITLES } from "./audio.js";
 
 const STEP = 1 / 60;
-const OUCH = ["Autsch!", "Aua!", "Hey!", "Das gibt Rache!", "Uff!", "Nicht nett!"];
 const $ = (id) => document.getElementById(id);
 
 // Verbindet Simulation, Netzwerk, Eingabe und Darstellung.
@@ -34,6 +34,7 @@ export class GameClient {
     this.running = true;
 
     this.load(msg.cp);
+    this.sound.loadVoices(this.world.teams.map((t) => t.voice));
     this.auth = msg.auth;
     this.syncing = msg.t === "sync";
     this.lastSeq = this.world.turn.seq;
@@ -276,7 +277,7 @@ export class GameClient {
     const sec = Math.ceil(t.time / 60);
     if (sec !== this.lastSecond) {
       this.lastSecond = sec;
-      if (sec <= 5 && sec > 0) this.sound.play("tick");
+      if (sec <= 5 && sec > 0) this.sound.tick(sec);
     }
   }
 
@@ -311,8 +312,6 @@ export class GameClient {
           if (!w) break;
           const color = TEAM_COLORS[world.teams[w.team]?.color] ?? "#fff";
           this.fx.floatText(w.x, w.y, `-${ev[2]}`, color, 20);
-          if (ev[2] >= 5 && w.hp > 0 && Math.random() < 0.35) this.fx.say(w.id, OUCH[Math.floor(Math.random() * OUCH.length)]);
-          this.sound.play("hurt");
           break;
         }
         case "heal": {
@@ -323,6 +322,16 @@ export class GameClient {
         case "say":
           this.fx.say(ev[1], ev[2]);
           break;
+        case "vo": {
+          // Wurm spricht: Satz aus der Teamstimme plus deutsche Sprechblase
+          const w = world.ents.get(ev[1]);
+          if (!w || w.type !== "worm") break;
+          const pack = world.teams[w.team]?.voice;
+          const line = this.sound.pickLine(pack, ev[2]);
+          this.sound.speak(pack, line, ev[2]);
+          if (SUBTITLES[line]) this.fx.say(w.id, SUBTITLES[line]);
+          break;
+        }
         case "snd":
           this.sound.play(ev[1]);
           break;
@@ -375,6 +384,7 @@ export class GameClient {
 
   continuousEffects(dt) {
     let jet = false;
+    let fuse = false;
     for (const e of this.world.ents.values()) {
       const p = this.rpos.get(e.id) ?? e;
       if ((e.type === "missile" || e.type === "airmissile") && Math.random() < 0.9) this.fx.trail(p.x - e.vx * 0.5, p.y - e.vy * 0.5);
@@ -384,8 +394,12 @@ export class GameClient {
         this.fx.flame(p.x - e.face * 9, p.y + 8, (Math.random() - 0.5) * 0.6, 1.5 + Math.random());
       } else if (e.type === "supersheep" && e.mode === "fly" && Math.random() < 0.5) this.fx.sparkle(p.x, p.y, "#ffd23d");
       else if (e.type === "holy" && Math.random() < dt * 8) this.fx.add({ kind: "spark", x: p.x, y: p.y, vx: 0, vy: -0.5, size: 2, life: 0.5, color: "#fff6b0" });
+      if (e.type === "dynamite") fuse = true;
     }
+    const t = this.world.turn;
     this.sound.loop("jet", jet);
+    this.sound.loop("fuse", fuse);
+    this.sound.loop("charge", t.charging && t.phase === "play");
   }
 
   updatePositions(dt) {

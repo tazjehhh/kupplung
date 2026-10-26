@@ -20,8 +20,10 @@ export function updateWorm(world, w) {
     w.vy = 0;
     world.emit(["fx", "splash", Math.round(w.x), Math.round(world.water), 2]);
     world.emit(["snd", "splash"]);
-    world.emit(["say", w.id, world.rng.pick(["Blubb!", "Ich kann nicht schwimmen!", "Gluck gluck…"])]);
-    if (w.hp > 0) world.damage(w, w.hp, true);
+    world.voice(w.id, "drown");
+    // Per Baseballschläger ins Wasser befördert: Home Run!
+    if (w.batHit && world.tick - w.batHit < 400) world.emit(["snd", "homerun"]);
+    if (w.hp > 0) world.damage(w, w.hp, "drown");
     return;
   }
   switch (w.mode) {
@@ -100,7 +102,7 @@ function airPhysics(world, w) {
     const impact = -(w.vx * n.x + w.vy * n.y);
     if (n.y < -0.5) {
       if (impact > FALL_DAMAGE_SPEED && world.settings.fallDamage) {
-        world.damage(w, Math.round((impact - FALL_DAMAGE_SPEED) * 5 + 3));
+        world.damage(w, Math.round((impact - FALL_DAMAGE_SPEED) * 5 + 3), "fall");
         world.emit(["snd", "thud"]);
       }
       if (w.mode === "fly" && impact > 2.6) bounceOff(w, n, 0.3, 0.75);
@@ -253,7 +255,7 @@ export const OBJECT_UPDATE = {
       const hit = stepBody(world, c, { r: 8, bounce: 0, friction: 0.3, grav: 0 });
       if (hit || c.rest) {
         c.chute = false;
-        world.emit(["snd", "thud"]);
+        world.emit(["snd", "cratedrop"]);
       }
     } else {
       stepBody(world, c, { r: 8, bounce: 0.1, friction: 0.5 });
@@ -284,7 +286,11 @@ export const OBJECT_UPDATE = {
   },
 
   grave(world, g) {
-    stepBody(world, g, { r: 5, bounce: 0.2, friction: 0.6 });
+    const hit = stepBody(world, g, { r: 5, bounce: 0.2, friction: 0.6 });
+    if (hit?.kind === "bounce" && !g.thud && (g.lastImpact ?? 0) > 1) {
+      g.thud = true;
+      world.emit(["snd", "grave"]);
+    }
     if (g.y > world.water + 6) world.remove(g);
   },
 };

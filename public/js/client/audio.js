@@ -4,12 +4,93 @@
 // Wellenformen, ein gezähmter Höhenbereich und etwas Raumhall.
 
 const VOLUME = 0.8;
+const BASE = "sounds/";
+
+// Spiel-Ereignis → mögliche Stimmen-Sätze (Hedgewars-Stimmpakete)
+export const VOICE_KINDS = {
+  turn: ["Hello", "Comeonthen", "Yessir", "Illgetyou", "Justyouwait", "Watchthis", "Thisoneismine", "Gonnagetyou"],
+  revenge: ["Revenge", "Illgetyou", "Youllregretthat", "Justyouwait"],
+  fire: ["Fire", "Watchthis"],
+  grenade: ["Grenade"],
+  cover: ["Takecover", "Runaway"],
+  incoming: ["Incoming", "Takecover"],
+  hurt: ["Ow1", "Ow2", "Ow3", "Ow4"],
+  hurtbig: ["Ouch", "Ooff1", "Ooff2", "Ooff3", "Nooo", "Leavemealone", "Youllregretthat", "Whatthe"],
+  fall: ["Ooff1", "Ooff2", "Ooff3"],
+  self: ["Oops", "Stupid", "Drat", "Bugger"],
+  friendly: ["Traitor", "Sameteam", "Watchit"],
+  die: ["Byebye", "Solong", "Ohdear", "Nooo"],
+  drown: ["Uh-oh", "Nooo", "Byebye"],
+  missed: ["Missed", "Drat", "Bugger", "Ohdear"],
+  laugh: ["Laugh"],
+  great: ["Excellent", "Brilliant", "Amazing"],
+  kill: ["Enemydown"],
+  firstblood: ["Firstblood"],
+  hurry: ["Hurry"],
+  victory: ["Victory"],
+  coward: ["Coward", "Boring"],
+  jump: ["Jump1", "Jump2", "Jump3"],
+  punch: ["Firepunch1", "Firepunch2", "Firepunch3", "Firepunch4", "Firepunch5", "Firepunch6"],
+};
+
+// Deutsche Sprechblase zum englischen Satz (ohne Eintrag: keine Blase)
+export const SUBTITLES = {
+  Hello: "Hallo!", Comeonthen: "Na komm schon!", Yessir: "Jawohl!", Illgetyou: "Ich krieg dich!",
+  Justyouwait: "Warte nur!", Watchthis: "Pass auf!", Thisoneismine: "Der gehört mir!", Gonnagetyou: "Dich krieg ich!",
+  Revenge: "Rache!", Fire: "Feuer!", Grenade: "Granate!", Takecover: "In Deckung!", Runaway: "Lauft!",
+  Incoming: "Achtung, von oben!", Ow1: "Au!", Ow2: "Au!", Ow3: "Aua!", Ow4: "Au!", Ouch: "Autsch!",
+  Ooff1: "Uff!", Ooff2: "Uff!", Ooff3: "Uff!", Traitor: "Verräter!", Sameteam: "Gleiches Team!",
+  Stupid: "Dumm gelaufen!", Oops: "Ups!", Drat: "Mist!", Bugger: "Verflixt!", Byebye: "Tschüss!",
+  Solong: "Macht's gut!", Ohdear: "Oh je…", Nooo: "Neeein!", "Uh-oh": "Oh oh…", Missed: "Daneben!",
+  Laugh: "Hahaha!", Excellent: "Exzellent!", Brilliant: "Brillant!", Amazing: "Unglaublich!",
+  Enemydown: "Feind erledigt!", Firstblood: "Erstes Blut!", Hurry: "Beeil dich!", Victory: "Sieg!",
+  Coward: "Feigling!", Boring: "Langweilig!", Whatthe: "Was zum…?!", Leavemealone: "Lass mich in Ruhe!",
+  Youllregretthat: "Das wirst du bereuen!", Watchit: "Pass doch auf!",
+};
+
+// Ereignis → Sample-Ebenen [Schlüssel, Lautstärke, Optionen]; fehlt ein Sample, wird synthetisiert
+const SAMPLED = {
+  launch: [["launch", 0.85], ["whoosh", 0.45, { delay: 0.05 }]],
+  throw: [["throw", 0.9]],
+  bounce: [["bounce", 0.7]],
+  shotgun: [["shotgun", 0.9, { wet: 0.35 }]],
+  reload: [["reload", 0.8, { delay: 0.35 }]],
+  bat: [["bat", 1]],
+  homerun: [["homerun", 0.8, { wet: 0.3 }]],
+  holy: [["holy", 0.85, { wet: 0.5, vary: 0 }]],
+  plane: [["plane", 0.8]],
+  rope: [["ropeshot", 0.8]],
+  ropeattach: [["ropeattach", 0.9]],
+  roperelease: [["roperelease", 0.9]],
+  tele: [["warp", 0.9, { wet: 0.4 }]],
+  jet: [["jetlaunch", 0.6]],
+  beep: [["minetick", 0.8]],
+  fizzle: [["fizzle", 1]],
+  fire: [["fire", 0.8]],
+  splash: [["splash", 0.9]],
+  crate: [["parachute", 0.8]],
+  cratedrop: [["cratedrop", 0.9]],
+  thud: [["bump", 0.9]],
+  grave: [["grave", 0.7]],
+  suddendeath: [["suddendeath", 0.8, { wet: 0.3 }]],
+  skip: [["skip", 0.8]],
+  denied: [["denied", 0.8]],
+  fuse: [["placed", 0.7]],
+  granny: [["yoohoo", 0.8, { rate: 0.88, vary: 0 }]],
+  victory: [["victory", 0.7, { vary: 0, wet: 0.2 }]],
+  click: [["click", 0.6]],
+};
 
 export class Sound {
   constructor() {
     this.ctx = null;
     this.muted = localStorage.getItem("wk.muted") === "1";
     this.loops = new Map();
+    this.manifest = null;
+    this.raw = new Map(); // URL → Promise<ArrayBuffer>
+    this.buffers = new Map(); // URL → AudioBuffer
+    this.last = new Map();
+    this.voiceUntil = 0;
   }
 
   unlock() {
@@ -54,6 +135,128 @@ export class Sound {
     this.white = this.noiseBuffer("white");
     this.pink = this.noiseBuffer("pink");
     this.brown = this.noiseBuffer("brown");
+    for (const url of this.raw.keys()) this.decode(url);
+  }
+
+  // ---------- Samples laden ----------
+
+  // Lädt Manifest und Effekt-Samples im Hintergrund (Dekodieren erst, wenn der Ton freigeschaltet ist)
+  preload() {
+    if (this.manifestPromise) return this.manifestPromise;
+    this.manifestPromise = fetch(BASE + "manifest.json")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((m) => {
+        this.manifest = m;
+        if (m) for (const files of Object.values(m.sfx)) for (const f of files) this.fetchRaw(BASE + f);
+        return m;
+      })
+      .catch(() => null);
+    return this.manifestPromise;
+  }
+
+  async loadVoices(packs) {
+    const m = await this.preload();
+    if (!m) return;
+    for (const pack of new Set(packs)) for (const f of Object.values(m.voices[pack] ?? {})) this.fetchRaw(BASE + f);
+  }
+
+  fetchRaw(url) {
+    if (this.raw.has(url)) return;
+    this.raw.set(url, fetch(url).then((r) => (r.ok ? r.arrayBuffer() : null)).catch(() => null));
+    if (this.ctx) this.decode(url);
+  }
+
+  decode(url) {
+    if (this.buffers.has(url) || !this.ctx) return;
+    this.buffers.set(url, null);
+    this.raw.get(url).then((data) => {
+      if (!data) return this.buffers.delete(url);
+      // decodeAudioData löst die Daten ab, darum eine Kopie dekodieren
+      this.ctx.decodeAudioData(data.slice(0)).then((buf) => this.buffers.set(url, buf), () => this.buffers.delete(url));
+    });
+  }
+
+  has(key) {
+    return !!this.manifest?.sfx[key]?.some((f) => this.buffers.get(BASE + f));
+  }
+
+  pickBuffer(files, key) {
+    const ready = files.map((f) => this.buffers.get(BASE + f)).filter(Boolean);
+    if (!ready.length) return null;
+    // Nicht zweimal hintereinander dieselbe Variante
+    let i = Math.floor(Math.random() * ready.length);
+    if (ready.length > 1 && i === this.last.get(key)) i = (i + 1) % ready.length;
+    this.last.set(key, i);
+    return ready[i];
+  }
+
+  playBuffer(buf, { vol = 1, rate = 1, vary = 0.05, wet = 0.2, delay = 0, loop = false } = {}) {
+    const ctx = this.ctx;
+    const t = ctx.currentTime + delay;
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.loop = loop;
+    src.playbackRate.value = rate * (1 + (Math.random() * 2 - 1) * vary);
+    const gain = ctx.createGain();
+    gain.gain.value = vol;
+    src.connect(gain);
+    this.route(gain, wet);
+    src.start(t);
+    return { src, gain };
+  }
+
+  sample(key, opts) {
+    const buf = this.pickBuffer(this.manifest?.sfx[key] ?? [], key);
+    return buf ? this.playBuffer(buf, opts) : null;
+  }
+
+  // ---------- Stimmen ----------
+
+  // Wählt einen passenden Satz aus dem Stimmpaket (auch ohne Ton, für die Sprechblase)
+  pickLine(pack, kind) {
+    const lines = VOICE_KINDS[kind];
+    if (!lines) return null;
+    const have = this.manifest?.voices[pack];
+    const options = have ? lines.filter((l) => have[l]) : lines;
+    return options.length ? options[Math.floor(Math.random() * options.length)] : null;
+  }
+
+  speak(pack, line, kind) {
+    if (!this.ready || !line) return;
+    const now = this.ctx.currentTime;
+    // Schmerzlaute und Sprunggeräusche nicht über andere Sätze legen
+    const minor = kind === "hurt" || kind === "jump" || kind === "fall";
+    if (minor && now < this.voiceUntil) return;
+    const file = this.manifest?.voices[pack]?.[line];
+    const buf = file && this.buffers.get(BASE + file);
+    if (!buf) {
+      if (kind === "hurt" || kind === "hurtbig" || kind === "fall") this.synth("hurt");
+      else if (kind === "die") this.synth("dying");
+      return;
+    }
+    this.playBuffer(buf, { vol: minor ? 0.75 : 0.95, vary: 0.03, wet: 0.15 });
+    this.voiceUntil = Math.max(this.voiceUntil, now + buf.duration * 0.8);
+  }
+
+  // Stimme in der Lobby probehören
+  async preview(pack) {
+    this.unlock();
+    const m = await this.preload();
+    const lines = m?.voices[pack] ?? {};
+    const file = lines[this.pickLine(pack, "turn")] ?? Object.values(lines)[0];
+    if (!file || !this.ctx || this.muted) return;
+    try {
+      const data = await fetch(BASE + file).then((r) => r.arrayBuffer());
+      this.playBuffer(await this.ctx.decodeAudioData(data), { vol: 0.95, vary: 0, wet: 0.15 });
+    } catch {}
+  }
+
+  tick(second) {
+    if (!this.ready) return;
+    const files = this.manifest?.sfx.tick ?? [];
+    const buf = this.buffers.get(BASE + files[(5 - second) % Math.max(1, files.length)]);
+    if (buf) this.playBuffer(buf, { vol: 0.7, vary: 0, wet: 0.05 });
+    else this.synth("tick");
   }
 
   noiseBuffer(color) {
@@ -212,6 +415,15 @@ export class Sound {
 
   explosion(size = 40) {
     if (!this.ready) return;
+    const key = size < 35 ? "expl_s" : size < 62 ? "expl_m" : "expl_l";
+    if (this.has(key)) {
+      const big = key === "expl_l";
+      this.sample(key, { vol: Math.min(1, 0.6 + size / 140), rate: big ? 0.92 : 1, wet: big ? 0.4 : 0.3 });
+      // Große Explosionen bekommen zusätzlich mittleren Körper und einen tiefen Schlag
+      if (big && this.has("expl_m")) this.sample("expl_m", { vol: 0.6, rate: 0.82, wet: 0.45, delay: 0.02 });
+      this.kick(100, 38, 0.3, big ? 0.45 : 0.25);
+      return;
+    }
     const s = Math.max(0.3, Math.min(2.2, size / 50));
     // Knall
     this.noise({ color: "white", type: "bandpass", f0: 2200, f1: 900, q: 0.8, dur: 0.06, vol: 0.18 + s * 0.08, attack: 0.001, wet: 0.2 });
@@ -229,6 +441,16 @@ export class Sound {
 
   play(name) {
     if (!this.ready) return;
+    const layers = SAMPLED[name];
+    if (layers && layers.every(([key]) => this.has(key))) {
+      for (const [key, vol, opts] of layers) this.sample(key, { vol, ...opts });
+      if (name === "collect") this.synth("collect");
+      return;
+    }
+    this.synth(name);
+  }
+
+  synth(name) {
     switch (name) {
       case "launch":
         this.kick(120, 55, 0.18, 0.4);
@@ -282,7 +504,7 @@ export class Sound {
         break;
       case "supersheep":
         this.tone({ type: "triangle", f0: 300, f1: 1200, dur: 0.6, vol: 0.18, lowpass: 2500, wet: 0.4 });
-        this.play("baa");
+        this.synth("baa");
         break;
       case "granny":
         this.tone({ type: "sawtooth", f0: 200, f1: 170, dur: 0.6, vol: 0.18, attack: 0.04, vibrato: 8, vibratoDepth: 22, band: 700, q: 1, lowpass: 1400, wet: 0.25 });
@@ -377,7 +599,11 @@ export class Sound {
   loop(name, on) {
     if (!this.ctx) return;
     const cur = this.loops.get(name);
-    if (on && !cur && !this.muted) {
+    const key = { jet: "jetloop", fuse: "fuse", charge: "charge" }[name];
+    if (on && !cur && !this.muted && key && this.has(key)) {
+      const node = this.sample(key, { vol: name === "charge" ? 0.6 : 0.5, vary: 0, wet: 0.1, loop: name !== "charge" });
+      this.loops.set(name, { src: node.src, g: node.gain });
+    } else if (on && !cur && !this.muted && name === "jet") {
       const src = this.ctx.createBufferSource();
       src.buffer = this.brown;
       src.loop = true;
@@ -392,8 +618,10 @@ export class Sound {
       src.start();
       this.loops.set(name, { src, g });
     } else if (!on && cur) {
-      cur.g.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + 0.1);
-      cur.src.stop(this.ctx.currentTime + 0.12);
+      const now = this.ctx.currentTime;
+      cur.g.gain.setValueAtTime(Math.max(0.0001, cur.g.gain.value), now);
+      cur.g.gain.exponentialRampToValueAtTime(0.0001, now + 0.1);
+      cur.src.stop(now + 0.12);
       this.loops.delete(name);
     }
   }
