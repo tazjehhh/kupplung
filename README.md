@@ -1,11 +1,12 @@
 # 🪱 Wurmkrieg
 
 Ein Worms-Klon für den Browser: rundenbasiertes Explosions-Chaos für **bis zu 6 Spieler online**, jeder an seinem eigenen PC.
-Läuft komplett auf Cloudflare Workers (kostenloser Plan reicht), kein eigener Server nötig.
+Läuft als reine Webseite auf GitHub Pages, die Spieler verbinden sich direkt miteinander (Peer-to-Peer).
+Kein Server, kein Account, keine Kosten.
 
 ## Features
 
-- **Online-Multiplayer** über Raum-Code oder Link, Lobby mit Chat, Reconnect nach Neuladen
+- **Online-Multiplayer** über Raum-Code oder Link, Lobby mit Chat, Wiedereinstieg nach Neuladen
 - **Zufällige, zerstörbare Karten** (Hügel, Inseln, Höhlen) in 5 Landschaften: Wiese, Wüste, Schnee, Süßkram, Vulkan
 - **18 Waffen** in vier Paketen
   - Basis: Bazooka, Granate, Schrotflinte, Baseballschläger, Feuerschlag
@@ -35,49 +36,49 @@ Läuft komplett auf Cloudflare Workers (kostenloser Plan reicht), kein eigener S
 | `T` | Chat |
 | `M` / `H` / `Esc` | Ton / Hilfe / Menü |
 
-## Online stellen (Cloudflare)
+## Online stellen (GitHub Pages)
 
-Du brauchst einen kostenlosen [Cloudflare-Account](https://dash.cloudflare.com/sign-up) und Node.js ≥ 20.
+1. Im Repo auf GitHub unter **Settings → Pages** bei „Source“ **GitHub Actions** auswählen.
+2. Den Code auf den Branch `main` bringen (mergen). Der Workflow `.github/workflows/deploy.yml` testet das Spiel
+   und veröffentlicht den Ordner `public/` automatisch, nach jedem weiteren Push auf `main` erneut.
+3. Das Spiel liegt dann unter **https://tazjehhh.github.io/kupplung/**. Namen eingeben, **Neuen Raum erstellen**
+   und den Link an deine Freunde schicken.
 
-```bash
-npm install
-npx wrangler login      # öffnet den Browser zum Anmelden
-npm run deploy
-```
-
-Wrangler gibt danach eine Adresse wie `https://wurmkrieg.<dein-name>.workers.dev` aus.
-Diese Adresse öffnen, Namen eingeben, **Neuen Raum erstellen** und den Link an deine Freunde schicken.
-
-Beim ersten Deploy fragt Cloudflare evtl. nach einer `workers.dev`-Subdomain, die kannst du frei wählen.
-Der Raum-Server nutzt Durable Objects mit SQLite-Speicher; die sind im kostenlosen Workers-Plan enthalten.
-
-**Automatisch deployen (optional):** Der GitHub-Workflow in `.github/workflows/deploy.yml` führt bei jedem Push die Tests aus
-und deployt Pushes auf `main` zu Cloudflare, sobald im Repo unter *Settings → Secrets and variables → Actions* die Secrets
-`CLOUDFLARE_API_TOKEN` (API-Token mit der Vorlage „Edit Cloudflare Workers“) und `CLOUDFLARE_ACCOUNT_ID` hinterlegt sind.
+Das Spiel ist eine rein statische Seite. Statt GitHub Pages funktioniert also jeder Webspace, auf den man den Ordner `public/` hochladen kann.
 
 ## Lokal entwickeln
 
 ```bash
-npm install
-npm run dev     # startet http://localhost:8787 inkl. Raum-Server
-npm test        # Tests der Spielsimulation
+npm run dev     # startet http://localhost:8080
+npm test        # Tests von Spielsimulation und Raum-Logik
 ```
 
-Zum Testen mit mehreren Spielern einfach mehrere Browser-Tabs öffnen: jeder Tab ist ein eigener Spieler.
+Es werden keine Pakete benötigt, nur Node.js ≥ 20. Zum Testen mit mehreren Spielern einfach mehrere Browser-Tabs öffnen:
+Jeder Tab ist ein eigener Spieler. Für den Verbindungsaufbau braucht es Internet (siehe unten).
 
 ## Wie es funktioniert
 
 ```
 public/                 Spiel (reines JavaScript, kein Build-Schritt)
   js/game/              Simulation: Gelände, Physik, Waffen, Zugablauf (läuft auch in Node)
-  js/client/            Darstellung, Eingabe, Sound, HUD, Netzwerk-Abgleich
+  js/client/            Darstellung, Eingabe, Sound, HUD, Abgleich der Spielstände
+  js/host.js            Raum-Logik (Lobby, Zugwechsel, Wiedereinstieg), läuft beim Gastgeber
+  js/net.js             Peer-to-Peer-Verbindungen über WebRTC
   js/main.js, lobby.js  Startbildschirm und Lobby
-src/worker.js           Cloudflare Worker + Durable Object pro Raum
-test/                   Tests der Simulation (node --test)
+  vendor/peerjs.min.js  PeerJS (MIT-Lizenz)
+scripts/serve.js        Mini-Webserver für die lokale Entwicklung
+test/                   Tests (node --test)
 ```
 
+- Wer einen Raum erstellt, ist **Gastgeber**: Der Raum läuft in seinem Browser-Tab, alle anderen verbinden sich per
+  WebRTC direkt zu ihm. Der öffentliche [PeerJS](https://peerjs.com)-Server vermittelt nur den Verbindungsaufbau,
+  danach laufen die Daten direkt zwischen den Browsern (oder über die Relay-Server von PeerJS, falls ein Netzwerk
+  keine direkte Verbindung erlaubt).
 - Der Spieler, der gerade **am Zug ist**, berechnet die Physik in seinem Browser und schickt ~30-mal pro Sekunde
   die Änderungen an alle anderen. So hat der aktive Spieler keinerlei Eingabeverzögerung.
 - Bei jedem Zugwechsel wird ein kompletter Spielstand (Checkpoint) verschickt, damit alle exakt synchron bleiben.
-- Der Durable Object hält Lobby und letzten Checkpoint vor: Wer die Seite neu lädt, steigt sofort wieder ein.
-  Verlässt der aktive Spieler das Spiel, übernimmt automatisch ein anderer die Simulation.
+- Wer die Seite neu lädt, steigt sofort wieder ein, auch der Gastgeber. Verlässt der aktive Spieler das Spiel,
+  übernimmt automatisch ein anderer die Simulation.
+
+**Grenzen:** Schließt der Gastgeber seinen Tab endgültig, ist der Raum für alle beendet. In sehr strengen Netzwerken
+(manche Firmen- oder Uni-WLANs) kann der Verbindungsaufbau scheitern.

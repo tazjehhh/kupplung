@@ -1,4 +1,4 @@
-import { Net } from "./net.js";
+import { HostNet, GuestNet, hostedRoom } from "./net.js";
 import { Lobby } from "./lobby.js";
 import { GameClient } from "./client/game-client.js";
 import { Sound } from "./client/audio.js";
@@ -16,6 +16,14 @@ function makeCode() {
   return code;
 }
 
+function setRoomInUrl(code) {
+  const params = new URLSearchParams(location.search);
+  if (code) params.set("r", code);
+  else params.delete("r");
+  const query = params.toString();
+  history.replaceState(null, "", query ? `?${query}` : location.pathname);
+}
+
 function makeId() {
   return crypto.randomUUID?.() ?? `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
 }
@@ -31,13 +39,19 @@ class App {
     this.room = null;
     this.game = null;
     this.roomCode = null;
+    this.everConnected = false;
+    this.lastWarning = 0;
     this.lobby = new Lobby(this);
 
     $("menu-name").value = this.profile.name;
-    $("btn-create").onclick = () => this.enter(makeCode());
+    $("btn-create").onclick = () => this.enter(makeCode(), true);
     $("btn-join").onclick = () => this.enter($("menu-code").value);
     $("menu-code").onkeydown = (e) => e.key === "Enter" && this.enter($("menu-code").value);
     for (const type of ["pointerdown", "keydown"]) document.addEventListener(type, () => this.sound.unlock());
+    // Der Raum läuft im Tab des Gastgebers: versehentliches Schließen abfangen
+    window.addEventListener("beforeunload", (e) => {
+      if (this.net?.isHost && this.net.guestCount() > 0) e.preventDefault();
+    });
 
     const code = new URLSearchParams(location.search).get("r");
     if (code) {
@@ -85,7 +99,7 @@ class App {
     setTimeout(() => el.remove(), ms + 500);
   }
 
-  enter(rawCode) {
+  enter(rawCode, create = false) {
     const code = String(rawCode ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
     const name = $("menu-name").value.trim();
     if (!name) {
@@ -101,9 +115,16 @@ class App {
     this.profile.name = name.slice(0, 16);
     this.saveProfile();
     this.roomCode = code;
-    history.replaceState(null, "", `?r=${code}`);
-    this.loading("Verbinde…");
-    this.net = new Net(code, () => this.hello(), (m) => this.onMessage(m));
+    this.everConnected = false;
+    setRoomInUrl(code);
+    const onMessage = (m) => this.onMessage(m);
+    if (create || hostedRoom() === code) {
+      this.loading("Raum wird eröffnet…");
+      this.net = new HostNet(code, this.me, () => this.hello(), onMessage);
+    } else {
+      this.loading("Verbinde mit dem Gastgeber…");
+      this.net = new GuestNet(code, () => this.hello(), onMessage);
+    }
   }
 
   hello() {
@@ -114,20 +135,50 @@ class App {
     this.net?.send({ t: "team", name: this.profile.name, team: this.profile.team, color: this.profile.color });
   }
 
-  leaveRoom() {
+  leaveRoom(ask = false) {
+    if (ask && this.net?.isHost && this.net.guestCount() > 0 &&
+        !confirm("Du bist Gastgeber: Wenn du gehst, endet der Raum für alle. Wirklich verlassen?")) return;
     this.net?.close();
     this.net = null;
     this.game?.destroy();
     this.game = null;
     this.room = null;
-    history.replaceState(null, "", location.pathname);
+    setRoomInUrl(null);
     this.loading(null);
     this.show("menu");
+  }
+
+  // Hinweise bei Verbindungsproblemen nicht im Sekundentakt wiederholen
+  warn(text) {
+    if (Date.now() - this.lastWarning < 10000) return;
+    this.lastWarning = Date.now();
+    this.toast(text, 4000);
+  }
+
+  connectionError(error) {
+    const code = this.roomCode;
+    if (error === "taken") {
+      this.leaveRoom();
+      $("menu-error").textContent = `Der Raumcode ${code} ist gerade belegt. Erstell einfach einen neuen Raum.`;
+    } else if (error === "notfound") {
+      if (this.everConnected) return this.warn("Gastgeber nicht erreichbar – versuche es weiter…");
+      this.leaveRoom();
+      $("menu-code").value = code;
+      $("menu-error").textContent = `Raum ${code} nicht gefunden. Ist der Gastgeber online und der Code richtig?`;
+    } else if (error === "signal") {
+      if (!this.everConnected && !this.net?.isHost) {
+        this.leaveRoom();
+        $("menu-error").textContent = "Keine Verbindung zum Vermittlungsserver. Bitte Internet prüfen und nochmal versuchen.";
+      } else if (this.net?.isHost) {
+        this.warn("Vermittlungsserver nicht erreichbar – neue Mitspieler können gerade nicht beitreten.");
+      }
+    }
   }
 
   onMessage(m) {
     switch (m.t) {
       case "welcome":
+        this.everConnected = true;
         this.room = m.room;
         if (m.room.host === this.me && !m.room.settings) this.net.send({ t: "settings", settings: DEFAULT_SETTINGS });
         this.onRoom();
@@ -171,8 +222,15 @@ class App {
         this.leaveRoom();
         this.toast("Der Raum wurde in einem anderen Tab geöffnet.");
         break;
+      case "roomclosed":
+        this.leaveRoom();
+        this.toast("Der Gastgeber hat den Raum geschlossen.");
+        break;
       case "_closed":
-        if (this.net) this.toast("Verbindung unterbrochen – verbinde neu…", 2000);
+        if (this.net) this.warn("Verbindung zum Gastgeber unterbrochen – verbinde neu…");
+        break;
+      case "_error":
+        this.connectionError(m.error);
         break;
     }
   }

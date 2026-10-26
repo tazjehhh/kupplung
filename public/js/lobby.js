@@ -48,7 +48,7 @@ export class Lobby {
     $("btn-copy").onclick = () => {
       navigator.clipboard?.writeText(location.href).then(() => app.toast("Link kopiert – schick ihn deinen Freunden!"));
     };
-    $("btn-leave").onclick = () => app.leaveRoom();
+    $("btn-leave").onclick = () => app.leaveRoom(true);
     $("lobby-chat-form").onsubmit = (e) => {
       e.preventDefault();
       const input = e.target.querySelector("input");
@@ -261,7 +261,8 @@ export class Lobby {
     start.disabled = !host || players.length < 1;
     start.textContent = players.length === 1 ? "Übungsspiel starten" : "Spiel starten";
     $("start-note").textContent = host
-      ? players.length === 1 ? "Allein? Du kannst schon mal üben – oder warte auf Freunde." : `${players.length} Teams bereit.`
+      ? (players.length === 1 ? "Allein? Du kannst schon mal üben – oder warte auf Freunde." : `${players.length} Teams bereit.`) +
+        " Du bist Gastgeber: Der Raum läuft in diesem Tab, also bitte offen lassen."
       : "Warte, bis der Host das Spiel startet…";
   }
 

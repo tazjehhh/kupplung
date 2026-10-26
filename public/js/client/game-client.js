@@ -74,7 +74,7 @@ export class GameClient {
     $("btn-abort").onclick = () => {
       if (confirm("Spiel für alle abbrechen und zurück zur Lobby?")) this.app.net.send({ t: "lobby" });
     };
-    $("btn-quit").onclick = () => this.app.leaveRoom();
+    $("btn-quit").onclick = () => this.app.leaveRoom(true);
     $("btn-over-lobby").onclick = () => this.app.net.send({ t: "lobby" });
     $("btn-mute").textContent = this.sound.muted ? "🔇" : "🔊";
     const form = $("hud-chat-form");

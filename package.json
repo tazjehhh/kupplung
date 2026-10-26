@@ -3,13 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Worms-Klon für den Browser – online mit Freunden, läuft auf Cloudflare Workers",
+  "description": "Worms-Klon für den Browser – online mit Freunden, Peer-to-Peer über WebRTC",
   "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
+    "dev": "node scripts/serve.js",
     "test": "node --test test/*.test.js"
-  },
-  "devDependencies": {
-    "wrangler": "^4.153.0"
   }
 }
